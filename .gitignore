@@ -1,0 +1,17 @@
+# Yedek / geçici dosyalar
+index.html.bak
+*.bak
+_c.js
+
+# Bağımlılıklar / Netlify
+node_modules/
+.netlify/
+
+# Gizli ortam değişkenleri (Netlify panelinde tutulur, repoya GİRMEZ)
+.env
+.env.*
+
+# İşletim sistemi / editör
+.DS_Store
+Thumbs.db
+*.log
