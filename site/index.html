@@ -2386,14 +2386,15 @@ function renderGrammar(){
       <div style="display:flex;gap:14px"><span class="xp-chip">⭐ ${S.xp||0} XP</span><span class="xp-chip" style="color:var(--red)">🔥 ${st.n||0} gün</span></div>
     </div>
     <div class="bar green" style="margin-top:8px"><i style="width:${Math.round(done/GRAMMAR.length*100)}%"></i></div>
-    <p class="muted" style="margin:10px 0 0;font-size:13px">Her modül Duolingo tarzı kısa bir ders: <b>kuralı gör → cümle kur → şık seç → eşleştir</b>. Doğru cevap ⭐XP kazandırır; ❤️ kalplerine dikkat et. Bir modülü bitirince ✓ olur.</p>
+    <p class="muted" style="margin:10px 0 0;font-size:13px">Her modül Duolingo tarzı bir ders: <b>kuralı gör → çöz → eşleştir</b>. <b>Kalıcılık için tekrar:</b> her konu ders boyunca birden çok kez gelir, <b>yanlış yaptığın soru ders bitmeden tekrar sorulur</b>, sonda da hızlı tekrar turu var.</p>
+    <button class="btn amber" style="margin-top:12px;width:100%" onclick="startReview()">🔁 Karışık Tekrar — bitmiş konuları karıştır</button>
   </div>`;
   html+=GRAMMAR.map(g=>{
     const dn=S.gram[g.id];const best=S.lessonBest&&S.lessonBest[g.id];
     return `<div class="skill ${dn?'done':''}" onclick="startGrammarLesson('${g.id}')">
       <div class="ring">${dn?'✓':g.id.replace('G','')}</div>
       <div class="si"><div class="st">${esc(g.title)} <span class="lvl ${lvlClass(g.lvl)}">${g.lvl}</span></div>
-        <div class="sd">${dn?('Tamamlandı'+(best!=null?' · en iyi %'+best:'')):'İnteraktif ders · ~10 soru'}</div></div>
+        <div class="sd">${dn?('Tamamlandı'+(best!=null?' · en iyi %'+best:'')):'İnteraktif ders · tekrarlı (~18 soru)'}</div></div>
       <button class="go" onclick="event.stopPropagation();startGrammarLesson('${g.id}')">${dn?'Tekrar':'Başla'}</button>
     </div>`;
   }).join("");
@@ -2402,24 +2403,46 @@ function renderGrammar(){
 
 /* ===== Duolingo tarzı ders motoru ===== */
 let LSN={};
-function buildLesson(id){
-  const g=GRAMMAR.find(x=>x.id===id);const det=GDET[id]||{};const plus=GRAMMAR_PLUS[id]||{};
-  const items=[];
-  const tipSecs=(det.lesson||[]).slice(0,3).map(s=>'<b>'+s.h+'</b><br>'+s.p).join('<br><br>');
-  items.push({type:'tip',title:g.title,html:(tipSecs||g.summary)+'<br><br>⚠️ '+g.mistake});
+function lessonSents(det,plus){
   let sents=[];
   (det.lesson||[]).forEach(s=>(s.ex||[]).forEach(e=>sents.push({en:strip(e.en),tr:e.tr})));
-  (det.complex||plus.complex||[]).forEach(c=>sents.push({en:strip(c.en),tr:c.tr}));
-  // çoktan seçmeli
-  const mc=(det.mini||g.quiz||[]).concat((det.test||(plus.test||[])).slice(0,4));
-  shuffle(mc).slice(0,7).forEach(q=>items.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex}));
-  // cümle kurma (kısa cümleler)
-  shuffle(sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;})).slice(0,3)
-    .forEach(s=>items.push({type:'build',tr:s.tr,answer:s.en}));
+  (det.complex||(plus&&plus.complex)||[]).forEach(c=>sents.push({en:strip(c.en),tr:c.tr}));
+  return sents;
+}
+function buildLesson(id){
+  const g=GRAMMAR.find(x=>x.id===id);const det=GDET[id]||{};const plus=GRAMMAR_PLUS[id]||{};
+  const items=[{type:'tip',title:g.title,html:((det.lesson||[]).slice(0,3).map(s=>'<b>'+s.h+'</b><br>'+s.p).join('<br><br>')||g.summary)+'<br><br>⚠️ '+g.mistake}];
+  const sents=lessonSents(det,plus);
+  const core=[];
+  // çoktan seçmeli (mini + test) — daha fazla soru = daha çok tekrar
+  shuffle((det.mini||g.quiz||[]).concat(det.test||plus.test||[])).slice(0,10).forEach(q=>core.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex}));
+  // cümle kurma
+  shuffle(sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;})).slice(0,4).forEach(s=>core.push({type:'build',tr:s.tr,answer:s.en}));
   // eşleştirme
   const matchable=shuffle(sents.filter(s=>s.en.split(/\s+/).length<=6)).slice(0,4);
-  if(matchable.length>=3)items.push({type:'match',pairs:matchable});
-  return [items[0]].concat(shuffle(items.slice(1)));
+  if(matchable.length>=3)core.push({type:'match',pairs:matchable});
+  shuffle(core).forEach(x=>items.push(x));
+  // KALICILIK İÇİN DERS SONU TEKRARI: aynı yapıları yeniden sor
+  const recap=shuffle(core.filter(x=>x.type==='mc')).slice(0,4).map(x=>Object.assign({},x));
+  if(recap.length){items.push({type:'tip',title:g.title+' — Hızlı Tekrar 🔁',html:'Az önce öğrendiklerini pekiştirelim. Aynı yapılar tekrar geliyor — akılda kalsın diye! 💪'});recap.forEach(x=>items.push(x));}
+  return items;
+}
+function buildReviewLesson(){
+  const doneIds=GRAMMAR.filter(g=>S.gram[g.id]).map(g=>g.id);
+  const pool=[];
+  doneIds.forEach(function(id){
+    const det=GDET[id]||{};const plus=GRAMMAR_PLUS[id]||{};
+    (det.mini||[]).concat(det.test||plus.test||[]).forEach(q=>pool.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex,mod:id}));
+    shuffle(lessonSents(det,plus).filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;})).slice(0,2).forEach(s=>pool.push({type:'build',tr:s.tr,answer:s.en,mod:id}));
+  });
+  const items=[{type:'tip',title:'Karışık Tekrar 🔁',html:'Bitirdiğin <b>tüm konulardan</b> karışık sorular. Eski bilgini tazele — kalıcılığın sırrı düzenli tekrar!'}];
+  shuffle(pool).slice(0,15).forEach(x=>items.push(x));
+  return items;
+}
+function startReview(){
+  if(!GRAMMAR.some(g=>S.gram[g.id])){alert('Önce en az bir modülü bitir; sonra Karışık Tekrar açılır.');return;}
+  LSN={id:'__review__',review:true,items:buildReviewLesson(),i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
+  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
 }
 function startGrammarLesson(id){
   LSN={id:id,items:buildLesson(id),i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
@@ -2438,7 +2461,7 @@ function renderLesson(){
   let body='',foot='';
   if(it.type==='tip'){
     body=`<div class="lesson-q"><div style="font-weight:700;color:var(--amber);font-size:13px;letter-spacing:1px">💡 KURAL</div><h2>${esc(it.title)}</h2><div class="lprompt" style="font-size:15px;line-height:1.75">${it.html}</div></div>`;
-    foot=`<button class="bigbtn green" onclick="lessonNext()">Başla →</button>`;
+    foot=`<button class="bigbtn green" onclick="lessonNext()">${LSN.i===0?'Başla →':'Devam →'}</button>`;
   }else if(it.type==='mc'){
     body=`<div class="lesson-q"><div class="muted" style="font-weight:700;font-size:13px">DOĞRU SEÇENEĞİ SEÇ</div><h2>${esc(it.q)}</h2>
       <div id="lchoices">${it.opts.map((o,j)=>`<button class="lchoice" onclick="lPickMC(${j})">${esc(o)}</button>`).join("")}</div></div>`;
@@ -2468,7 +2491,7 @@ function renderLesson(){
 }
 function toggleAsk(){const p=document.getElementById('askPanel');if(p)p.style.display=(p.style.display==='none'?'block':'none');}
 function lessonAskContext(){
-  const it=LSN.items[LSN.i];const g=GRAMMAR.find(x=>x.id===LSN.id);
+  const it=LSN.items[LSN.i];const gid=(it&&it.mod)||LSN.id;const g=GRAMMAR.find(x=>x.id===gid)||{title:"Gramer",lvl:""};
   let c="Gramer konusu: "+g.title+" ("+g.lvl+"). ";
   if(it.type==='mc')c+="Soru: "+it.q+" | Şıklar: "+it.opts.join(" / ")+" | Doğru cevap: "+it.opts[it.a]+" | Not: "+(it.ex||"");
   else if(it.type==='build')c+="Öğrenci şu Türkçe cümlenin İngilizcesini kuruyor: '"+it.tr+"'. Doğru İngilizce: '"+it.answer+"'.";
@@ -2516,9 +2539,15 @@ function lCheck(){
   }
 }
 function lResult(ok,ex){
-  if(ok)LSN.correct++;else LSN.hearts=Math.max(0,LSN.hearts-1);
+  const it=LSN.items[LSN.i];var requeued=false;
+  if(ok)LSN.correct++;
+  else{
+    LSN.hearts=Math.max(0,LSN.hearts-1);
+    // yanlışı kalıcılık için tekrar kuyruğa ekle (doğru yapana dek, en fazla 2 kez)
+    if(it&&it.type!=='match'){var n=it._rq||0;if(n<2&&LSN.items.length<40){var c=Object.assign({},it);c._rq=n+1;LSN.items.push(c);requeued=true;}}
+  }
   const h=document.querySelector('.hearts');if(h)h.innerHTML=heartsHTML();
-  const fb=document.getElementById('fbBox');if(fb){fb.className='fb show '+(ok?'ok':'no');fb.innerHTML=(ok?'✅ Doğru!':'❌ Yanlış.')+(ex?'<br><span style="font-weight:400">'+esc(ex)+'</span>':'');}
+  const fb=document.getElementById('fbBox');if(fb){fb.className='fb show '+(ok?'ok':'no');fb.innerHTML=(ok?'✅ Doğru!':('❌ Yanlış.'+(requeued?' Bu soru birazdan tekrar gelecek.':'')))+(ex?'<br><span style="font-weight:400">'+esc(ex)+'</span>':'');}
   const btn=document.getElementById('lbtn');btn.className='bigbtn '+(ok?'green':'red');btn.textContent='Devam →';btn.disabled=false;btn.onclick=lessonNext;
 }
 /* Match */
@@ -2540,22 +2569,23 @@ function mTap(side,i){
 }
 function bumpStreak(){const today=stripTime(new Date()).getTime();S.streak=S.streak||{n:0,last:0};if(S.streak.last===today)return;S.streak.n=(today-S.streak.last===86400000)?S.streak.n+1:1;S.streak.last=today;}
 function endLesson(){
-  const id=LSN.id;const pct=Math.round(LSN.correct/Math.max(1,LSN.total)*100);const xp=LSN.correct*10;
+  const review=LSN.review;const id=LSN.id;
+  const pct=Math.round(LSN.correct/Math.max(1,LSN.total)*100);const xp=LSN.correct*10;
   S.xp=(S.xp||0)+xp;bumpStreak();
-  S.lessonBest=S.lessonBest||{};S.lessonBest[id]=Math.max(S.lessonBest[id]||0,pct);
-  if(pct>=60)S.gram[id]=true;
+  if(!review){S.lessonBest=S.lessonBest||{};S.lessonBest[id]=Math.max(S.lessonBest[id]||0,pct);if(pct>=60)S.gram[id]=true;}
   save();
-  const g=GRAMMAR.find(x=>x.id===id);
+  const title=review?'Karışık Tekrar':((GRAMMAR.find(x=>x.id===id)||{title:'Ders'}).title);
+  const again=review?"startReview()":("startGrammarLesson('"+id+"')");
   document.getElementById("lessonOverlay").innerHTML=`<div class="lesson-wrap" style="justify-content:center;text-align:center;align-items:center">
     <div style="font-size:66px">${pct>=80?'🏆':pct>=60?'🎉':'💪'}</div>
-    <h2 style="font-family:Georgia,serif;margin:.2em 0">${esc(g.title)}<br>${pct>=60?'tamamlandı!':'— biraz daha pratik!'}</h2>
+    <h2 style="font-family:Georgia,serif;margin:.2em 0">${esc(title)}<br>${review?'tekrarı bitti!':(pct>=60?'tamamlandı!':'— biraz daha pratik!')}</h2>
     <div style="display:flex;gap:12px;margin:18px 0">
       <div class="stat"><div class="v" style="color:var(--amber)">+${xp}</div><div class="k">XP</div></div>
       <div class="stat"><div class="v">%${pct}</div><div class="k">doğruluk</div></div>
       <div class="stat"><div class="v">🔥${S.streak.n}</div><div class="k">gün seri</div></div>
     </div>
     <button class="bigbtn green" style="max-width:300px" onclick="closeLesson(true)">Bitir</button>
-    <button class="btn ghost" style="margin-top:12px" onclick="startGrammarLesson('${id}')">🔁 Tekrar çöz</button>
+    <button class="btn ghost" style="margin-top:12px" onclick="${again}">🔁 Tekrar çöz</button>
   </div>`;
 }
 function toggleGmod(id){document.getElementById("gm_"+id).classList.toggle("open");}
