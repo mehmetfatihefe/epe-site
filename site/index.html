@@ -403,14 +403,14 @@ const EXAM = new Date(2026,7,24); // 24 Ağustos 2026
 
 /* --- PROGRAM --- */
 const PHASES = [
-  {name:"Faz 1 — Temel", when:"18 Haz – 8 Tem · gramer temeli kurma", weeks:[1,2,3]},
-  {name:"Faz 2 — Geliştirme", when:"9 Tem – 29 Tem · ileri gramer + soru tipleri + yazma", weeks:[4,5,6]},
-  {name:"Faz 3 — Sınav Provası", when:"30 Tem – 19 Ağu · yoğun pratik + denemeler", weeks:[7,8,9]},
-  {name:"Final", when:"20 – 23 Ağu · tekrar + dinlenme", weeks:[10]},
+  {name:"Faz 1 — Temel", when:"15 Haz – 5 Tem · gramer temeli kurma", weeks:[1,2,3]},
+  {name:"Faz 2 — Geliştirme", when:"6 Tem – 26 Tem · ileri gramer + soru tipleri + yazma", weeks:[4,5,6]},
+  {name:"Faz 3 — Sınav Provası", when:"27 Tem – 16 Ağu · yoğun pratik + denemeler", weeks:[7,8,9]},
+  {name:"Final", when:"17 – 23 Ağu · tekrar + dinlenme", weeks:[10]},
 ];
 
 const PLAN = [
-{n:1,title:"Cümlenin temeli + zamanlar (1)",start:"2026-06-18",end:"2026-06-24",days:[
+{n:1,title:"Cümlenin temeli + zamanlar (1)",start:"2026-06-15",end:"2026-06-21",days:[
  {d:"Pzt",t:["Gramer: Cümle yapısı (özne+fiil+nesne) + am/is/are","12 yeni kelime (Kelimeler sekmesi)","15 dk kolay İngilizce okuma"]},
  {d:"Sal",t:["Gramer: there is/are + articles (a/an/the)","12 kelime + dünkülerin tekrarı","15 dk yavaş/altyazılı dinleme"]},
  {d:"Çar",t:["Gramer: Present Simple","12 kelime","Yazma: 5 basit cümle kur"]},
@@ -419,7 +419,7 @@ const PLAN = [
  {d:"Cmt",t:["Hafta 1 gramerinden 20 karışık alıştırma","12 kelime"]},
  {d:"Paz",t:["Haftalık tekrar (hafif gün): kelime tekrarı","Hata defterini gözden geçir"]},
 ]},
-{n:2,title:"Zamanlar (2) + modallar",start:"2026-06-25",end:"2026-07-01",days:[
+{n:2,title:"Zamanlar (2) + modallar",start:"2026-06-22",end:"2026-06-28",days:[
  {d:"Pzt",t:["Gramer: Past Simple + düzenli fiiller","15 kelime","Okuma"]},
  {d:"Sal",t:["Gramer: Düzensiz fiiller (irregular verbs) ezber","15 kelime","Dinleme + ilk not alma denemesi"]},
  {d:"Çar",t:["Gramer: Future (will / be going to)","15 kelime","Yazma"]},
@@ -428,7 +428,7 @@ const PLAN = [
  {d:"Cmt",t:["Karışık alıştırma (Hafta 1+2) — 25 soru","15 kelime"]},
  {d:"Paz",t:["Tekrar (hafif gün)","Hata defteri"]},
 ]},
-{n:3,title:"Karşılaştırma + miktar + fiil kalıpları",start:"2026-07-02",end:"2026-07-08",days:[
+{n:3,title:"Karşılaştırma + miktar + fiil kalıpları",start:"2026-06-29",end:"2026-07-05",days:[
  {d:"Pzt",t:["Gramer: Comparatives & Superlatives","15 kelime","Okuma (skimming pratiği)"]},
  {d:"Sal",t:["Gramer: as…as / less…than","15 kelime","Dinleme"]},
  {d:"Çar",t:["Gramer: Quantifiers (much/many, (a)few/(a)little, plenty of)","15 kelime","Yazma"]},
@@ -437,7 +437,7 @@ const PLAN = [
  {d:"Cmt",t:["FAZ 1 MİNİ DEĞERLENDİRME: 30 gramer sorusu","15 kelime"],mock:"Mini test"},
  {d:"Paz",t:["Faz 1 genel tekrar","Hata defteri"]},
 ]},
-{n:4,title:"İlgi cümleleri + edilgen çatı",start:"2026-07-09",end:"2026-07-15",days:[
+{n:4,title:"İlgi cümleleri + edilgen çatı",start:"2026-07-06",end:"2026-07-12",days:[
  {d:"Pzt",t:["Gramer: Relative clauses (who/which/that)","18 kelime","Denemeler: Cloze Test çöz"]},
  {d:"Sal",t:["Gramer: Relative clauses (whose/where)","18 kelime","Dinleme + not alma"]},
  {d:"Çar",t:["Gramer: Passive Voice (present/past)","18 kelime","Yazma: Essay yapısını öğren (giriş-gelişme-sonuç)"]},
@@ -446,7 +446,7 @@ const PLAN = [
  {d:"Cmt",t:["Denemeler: Cloze Test (süreli) + kontrol","18 kelime"]},
  {d:"Paz",t:["Tekrar","1 Opinion essay yaz"]},
 ]},
-{n:5,title:"Koşul cümleleri (EN KRİTİK ⭐)",start:"2026-07-16",end:"2026-07-22",days:[
+{n:5,title:"Koşul cümleleri (EN KRİTİK ⭐)",start:"2026-07-13",end:"2026-07-19",days:[
  {d:"Pzt",t:["Gramer: Conditional Type 0 & 1","18 kelime","Okuma"]},
  {d:"Sal",t:["Gramer: Conditional Type 2","18 kelime","Denemeler: Closest Meaning çöz"]},
  {d:"Çar",t:["Gramer: Conditional Type 3","18 kelime","Comparison & Contrast essay kalıbı"]},
@@ -455,7 +455,7 @@ const PLAN = [
  {d:"Cmt",t:["Denemeler: Closest Meaning (süreli)","1 essay yaz"]},
  {d:"Paz",t:["Tekrar — conditionals'a yoğunlaş","Hata defteri"]},
 ]},
-{n:6,title:"Dolaylı anlatım + ettirgen + ileri bağlaçlar",start:"2026-07-23",end:"2026-07-29",days:[
+{n:6,title:"Dolaylı anlatım + ettirgen + ileri bağlaçlar",start:"2026-07-20",end:"2026-07-26",days:[
  {d:"Pzt",t:["Gramer: Reported Speech (statements)","18 kelime","Okuma"]},
  {d:"Sal",t:["Gramer: Reported Speech (questions/commands)","18 kelime","Denemeler: Paragraph Completion"]},
  {d:"Çar",t:["Gramer: Causatives (have/get sth done, make/let)","18 kelime","Effect essay kalıbı"]},
@@ -464,7 +464,7 @@ const PLAN = [
  {d:"Cmt",t:["YARIM DENEME: Cloze + Closest + Reading + Paragraph (süreli)","kontrol + hata defteri"],mock:"Yarım deneme"},
  {d:"Paz",t:["Faz 2 genel tekrar","Hata defteri"]},
 ]},
-{n:7,title:"Tam bölüm pratikleri (yeni konu yok)",start:"2026-07-30",end:"2026-08-05",days:[
+{n:7,title:"Tam bölüm pratikleri (yeni konu yok)",start:"2026-07-27",end:"2026-08-02",days:[
  {d:"Pzt",t:["Hata defterinden gramer tekrarı","Denemeler: Cloze (süreli)","15 kelime"]},
  {d:"Sal",t:["Kelime tekrarı","Denemeler: Closest Meaning (süreli)","Dinleme + not alma"]},
  {d:"Çar",t:["Denemeler: Reading 1 (süreli)","1 essay yaz","15 kelime"]},
@@ -473,7 +473,7 @@ const PLAN = [
  {d:"Cmt",t:["Denemeler: Reading 2 (süreli)","Kelime tekrarı"]},
  {d:"Paz",t:["Tekrar + en zayıf bölüme ekstra pratik"]},
 ]},
-{n:8,title:"İlk TAM deneme",start:"2026-08-06",end:"2026-08-12",days:[
+{n:8,title:"İlk TAM deneme",start:"2026-08-03",end:"2026-08-09",days:[
  {d:"Pzt",t:["TAM DENEME — Örnek EPE'yi baştan sona süreli çöz (tüm bölümler)"],mock:"TAM DENEME"},
  {d:"Sal",t:["Deneme kontrolü: TÜM yanlışları hata defterine yaz, sebebini bul"]},
  {d:"Çar",t:["En zayıf bölüm 1'e yoğun pratik","1 essay yaz"]},
@@ -482,7 +482,7 @@ const PLAN = [
  {d:"Cmt",t:["Reading + Listening pratiği"]},
  {d:"Paz",t:["Tekrar + hata defterini ezberle"]},
 ]},
-{n:9,title:"İkinci tam deneme + cila",start:"2026-08-13",end:"2026-08-19",days:[
+{n:9,title:"İkinci tam deneme + cila",start:"2026-08-10",end:"2026-08-16",days:[
  {d:"Pzt",t:["İkinci tam deneme (YDS/YÖKDİL veya başka EPE örneği)"],mock:"Tam deneme 2"},
  {d:"Sal",t:["Kontrol + hata defteri"]},
  {d:"Çar",t:["En sık yaptığın 20 hatayı ezberle","1 essay yaz","Dinleme"]},
@@ -491,7 +491,10 @@ const PLAN = [
  {d:"Cmt",t:["Reading + kelime tekrarı","Son essay"]},
  {d:"Paz",t:["Hafif tekrar"]},
 ]},
-{n:10,title:"Final — Tekrar & Dinlenme",start:"2026-08-20",end:"2026-08-23",days:[
+{n:10,title:"Final — Tekrar & Dinlenme",start:"2026-08-17",end:"2026-08-23",days:[
+ {d:"17 Ağu Pzt",t:["Hata defterini baştan sona oku","Gramer özetlerini gözden geçir (yeni şey yok)"]},
+ {d:"18 Ağu Sal",t:["En zayıf 2 bölüme hafif pratik","Kelime tekrarı (bilinmeyenler)"]},
+ {d:"19 Ağu Çar",t:["4 essay kalıbını ezberle, 1 essay yaz","Dinleme: 1 kısa pratik"]},
  {d:"20 Ağu Per",t:["Hata defteri + gramer özeti + essay kalıpları tekrarı (yeni şey yok)"]},
  {d:"21 Ağu Cum",t:["Hata defteri + kelime tekrarı"]},
  {d:"22 Ağu Cmt",t:["Hafif tekrar, 1 essay, erken uyku"]},
@@ -1821,13 +1824,13 @@ async function listModelsUI(){
   }catch(e){out.innerHTML='<span style="color:var(--red)">✗ '+esc(e.message)+'</span>';}
 }
 const SYS_TUTOR="Sen, İngilizce Yeterlilik Sınavına (EPE, B1-B2 düzey) hazırlanan Türk bir öğrenciye yardım eden, sıcak ve net bir İngilizce öğretmenisin. Açıklamaları Türkçe yap, örnek cümleleri İngilizce ver. Kısa, anlaşılır ve cesaretlendirici ol. Markdown başlık/yıldız kullanma, sade metin yaz.";
-function speak(text){
+function speak(text,slow){
   try{
     const clean=String(text).replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim();
     if(!clean)return;
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(clean);
-    u.lang="en-US";u.rate=.92;
+    u.lang="en-US";u.rate=slow?0.6:0.92;
     const vs=speechSynthesis.getVoices();
     const v=vs.find(x=>/en-US/i.test(x.lang))||vs.find(x=>/^en/i.test(x.lang));
     if(v)u.voice=v;
@@ -2217,6 +2220,7 @@ function openBook(id){
      <div class="muted" style="margin-bottom:4px">${esc(b.g)} · <span class="lvl ${b.lvl}">${b.lvl}</span> · ${b.text.split(/\s+/).length} kelime</div>
      <div class="read-tools">
        <button class="btn amber" onclick="speakBook('${id}')">🔊 Tümünü dinle</button>
+       <button class="btn ghost" onclick="speakBook('${id}',true)">🐢 Yavaş</button>
        <button class="btn ghost" onclick="bStop()">⏹ Durdur</button>
        <button class="btn ${read?'green':'dark'}" id="bReadBtn" onclick="bToggleRead('${id}')">${read?'✓ Okundu':'Okudum işaretle'}</button>
      </div>
@@ -2246,7 +2250,7 @@ function openBook(id){
    </div>`;
   window.scrollTo(0,0);
 }
-function speakBook(id){const b=READING.find(x=>x.id===id);if(b)speak(b.text);}
+function speakBook(id,slow){const b=READING.find(x=>x.id===id);if(b)speak(b.text,slow);}
 function bStop(){try{speechSynthesis.cancel();}catch(e){}}
 function bToggleRead(id){S.read[id]=!S.read[id];save();const btn=document.getElementById("bReadBtn");if(btn){btn.className="btn "+(S.read[id]?"green":"dark");btn.textContent=S.read[id]?"✓ Okundu":"Okudum işaretle";}renderDash();}
 async function bAi(id,kind){
@@ -2440,6 +2444,8 @@ function buildLesson(id){
   shuffle((det.mini||g.quiz||[]).concat(det.test||plus.test||[])).slice(0,10).forEach(q=>core.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex}));
   // cümle kurma
   shuffle(sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;})).slice(0,4).forEach(s=>core.push({type:'build',tr:s.tr,answer:s.en}));
+  // dinleme: sesi duy → cümleyi kur (telaffuz + dinleme pratiği)
+  shuffle(sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=8;})).slice(0,2).forEach(s=>core.push({type:'listen',tr:s.tr,answer:s.en}));
   // eşleştirme
   const matchable=shuffle(sents.filter(s=>s.en.split(/\s+/).length<=6)).slice(0,4);
   if(matchable.length>=3)core.push({type:'match',pairs:matchable});
@@ -2492,6 +2498,12 @@ function renderLesson(){
     body=`<div class="lesson-q"><div class="muted" style="font-weight:700;font-size:13px">KELİMELERE DOKUNARAK CÜMLEYİ KUR</div><h2 style="font-size:18px">🇹🇷 ${esc(it.tr)}</h2>
       <div class="build-answer" id="bAns"></div><div class="build-bank" id="bBank"></div></div>`;
     foot=lFooter("Kontrol et",true);
+  }else if(it.type==='listen'){
+    body=`<div class="lesson-q"><div class="muted" style="font-weight:700;font-size:13px">🎧 DİNLE VE CÜMLEYİ KUR</div>
+      <div style="display:flex;gap:8px;margin:10px 0 16px"><button class="btn dark" style="flex:1" onclick="speak(LSN.items[LSN.i].answer)">🔊 Tekrar dinle</button><button class="btn ghost" onclick="speak(LSN.items[LSN.i].answer,true)">🐢 Yavaş</button></div>
+      <div class="build-answer" id="bAns"></div><div class="build-bank" id="bBank"></div>
+      <div class="ai-hint" style="margin-top:8px">İpucu (Türkçe): ${esc(it.tr)}</div></div>`;
+    foot=lFooter("Kontrol et",true);
   }else if(it.type==='match'){
     body=`<div class="lesson-q"><div class="muted" style="font-weight:700;font-size:13px">EŞLEŞTİR — İNGİLİZCE ↔ TÜRKÇE</div><h2 style="font-size:18px">Doğru çiftlere dokun</h2><div class="lmatch" id="lmatch"></div></div>`;
     foot=`<div class="fb" id="fbBox"></div><button class="bigbtn gray" id="lbtn" disabled>Tümünü eşleştir</button>`;
@@ -2508,7 +2520,8 @@ function renderLesson(){
       <div id="askOut" style="margin-top:8px"></div>`:aiOffBox()}
     </div></div>`;
   document.getElementById("lessonOverlay").innerHTML=`<div class="lesson-wrap">${head}${body}${askBlock}<div class="lfeed">${foot}</div></div>`;
-  if(it.type==='build')renderBuild();
+  if(it.type==='build'||it.type==='listen')renderBuild();
+  if(it.type==='listen')setTimeout(function(){speak(it.answer);},250);
   if(it.type==='match')renderMatch();
 }
 function toggleAsk(){const p=document.getElementById('askPanel');if(p)p.style.display=(p.style.display==='none'?'block':'none');}
@@ -2516,7 +2529,7 @@ function lessonAskContext(){
   const it=LSN.items[LSN.i];const gid=(it&&it.mod)||LSN.id;const g=GRAMMAR.find(x=>x.id===gid)||{title:"Gramer",lvl:""};
   let c="Gramer konusu: "+g.title+" ("+g.lvl+"). ";
   if(it.type==='mc')c+="Soru: "+it.q+" | Şıklar: "+it.opts.join(" / ")+" | Doğru cevap: "+it.opts[it.a]+" | Not: "+(it.ex||"");
-  else if(it.type==='build')c+="Öğrenci şu Türkçe cümlenin İngilizcesini kuruyor: '"+it.tr+"'. Doğru İngilizce: '"+it.answer+"'.";
+  else if(it.type==='build'||it.type==='listen')c+="Öğrenci şu Türkçe cümlenin İngilizcesini kuruyor: '"+it.tr+"'. Doğru İngilizce: '"+it.answer+"'.";
   else if(it.type==='match')c+="Eşleştirme çiftleri: "+it.pairs.map(p=>p.en+" = "+p.tr).join("; ")+".";
   else if(it.type==='tip')c+="Kural özeti: "+strip(it.html);
   return c;
@@ -2553,7 +2566,7 @@ function lCheck(){
     const ok=LSN.sel===it.a;
     document.querySelectorAll('#lchoices .lchoice').forEach((b,k)=>{b.classList.add('disabled');if(k===it.a)b.classList.add('correct');if(k===LSN.sel&&!ok)b.classList.add('wrong');});
     lResult(ok,it.ex);
-  }else if(it.type==='build'){
+  }else if(it.type==='build'||it.type==='listen'){
     LSN.answered=true;LSN.total++;
     const ok=normalize(LSN.built.map(b=>b.w).join(' '))===normalize(it.answer);
     document.querySelectorAll('#bBank .chip').forEach(c=>c.classList.add('used'));
