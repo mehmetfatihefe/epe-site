@@ -7,12 +7,12 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap');
   :root{
-    --ink:#3c3c3c; --ink2:#777777; --paper:#f7f9fb; --surface:#ffffff;
-    --line:#e5e5e5; --muted:#afafaf; --amber:#ff9600; --amber-soft:#fff1d6;
-    --green:#58cc02; --green-soft:#d7f7c0; --red:#ff4b4b; --red-soft:#ffdfe0;
-    --blue:#1cb0f6; --purple:#ce82ff;
-    --shadow:0 2px 0 rgba(0,0,0,.04),0 6px 20px rgba(0,0,0,.05);
-    --radius:18px;
+    --ink:#4a4a4a; --ink2:#8a8a8a; --paper:#f4f7f4; --surface:#ffffff;
+    --line:#ebeeec; --muted:#b3b8b3; --amber:#f7a945; --amber-soft:#fdeecd;
+    --green:#74c95a; --green-soft:#e3f4d6; --red:#f47b7b; --red-soft:#fce3e3;
+    --blue:#6fc1ec; --purple:#c79bee;
+    --shadow:0 2px 0 rgba(60,80,60,.03),0 8px 22px rgba(60,80,60,.06);
+    --radius:20px;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--paper);color:var(--ink);
@@ -22,13 +22,13 @@
   a{color:var(--blue);font-weight:700}
   .wrap{max-width:880px;margin:0 auto;padding:0 16px 64px}
 
-  header.top{background:linear-gradient(135deg,#58cc02,#46a302);color:#fff;padding:22px 16px 18px}
+  header.top{background:linear-gradient(135deg,#edf7e3,#e6f2ec);color:var(--ink);padding:20px 16px 16px;border-bottom:2px solid #e6efe0}
   .top-inner{max-width:880px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
-  .brand{font-family:'Baloo 2','Nunito',sans-serif;font-size:23px;font-weight:800;letter-spacing:.3px;margin:0}
-  .brand small{display:block;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:rgba(255,255,255,.9);letter-spacing:.3px;margin-top:2px}
+  .brand{font-family:'Baloo 2','Nunito',sans-serif;font-size:23px;font-weight:800;letter-spacing:.3px;margin:0;color:#5aa83f}
+  .brand small{display:block;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.3px;margin-top:2px}
   .countdown{text-align:right;line-height:1.1}
-  .countdown .num{font-family:'Baloo 2',sans-serif;font-size:34px;font-weight:800;color:#ffc800}
-  .countdown .lbl{font-size:11px;color:rgba(255,255,255,.9);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+  .countdown .num{font-family:'Baloo 2',sans-serif;font-size:34px;font-weight:800;color:var(--amber)}
+  .countdown .lbl{font-size:11px;color:var(--ink2);text-transform:uppercase;letter-spacing:1px;font-weight:700}
 
   nav.tabs{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border-bottom:2px solid var(--line);
     display:flex;gap:6px;padding:10px 16px;overflow-x:auto}
@@ -215,7 +215,7 @@
   .modal-card{background:var(--surface);border-radius:16px;max-width:460px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow:auto}
   .modal-card h3{margin:0 0 4px;font-size:18px}
   .modal-card input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-family:inherit;font-size:14px;margin-top:6px}
-  .gear{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:600;cursor:pointer}
+  .gear{background:#fff;border:2px solid var(--line);color:var(--ink2);border-radius:12px;padding:7px 12px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 0 var(--line)}
   .ai-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 7px;border-radius:99px;background:var(--amber-soft);color:#b9701d;text-transform:uppercase;margin-left:6px}
   .ai-off{font-size:13px;background:#fff5e6;border:1px solid #f0d9b3;border-radius:10px;padding:10px 12px;margin-top:8px;color:#8a5a12}
 
