@@ -1895,7 +1895,61 @@ function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").repl
 function aiOffBox(){return '<div class="ai-off">🔑 Bu özellik yapay zekâ ile çalışır. Sağ üstten <b>⚙️ AI Ayarı</b>\'na ücretsiz Gemini API anahtarını girersen aktifleşir.</div>';}
 
 /* ============================== AI KOÇ (program farkındalıklı, hafızalı) ============================== */
-const SYS_COACH="Sen, bir öğrencinin İngilizce Yeterlilik Sınavı (EPE, hedef 70/100) hazırlığına eşlik eden kişisel İngilizce koçusun ve hocasısın. Türkçe konuşursun; sıcak, motive edici ama dürüst ve nettsin. Öğrencinin nerede kaldığını, güçlü ve zayıf yanlarını bilir, buna göre SOMUT ve kişiye özel yönlendirme yaparsın (hangi gün, hangi gramer modülü, hangi sınav bölümü, hangi kelime seviyesi). Asla genel-geçer laf etme; sana verilen ilerleme verisine ve hafızandaki profile dayan. Kısa-orta uzunlukta, gerekiyorsa madde madde yaz. Markdown başlık (#) kullanma. ÇOK ÖNEMLİ: Cevabının en sonuna, kullanıcıya gösterilmeyecek tek bir satır olarak '###HAFIZA###' yaz; ardından öğrenci hakkındaki GÜNCEL profili kısa maddelerle yeniden yaz (güçlü yönler, zayıf yönler, nerede kaldığı, hedefleri, kişisel notlar/tercihler). Önceki profildeki bilgileri koru, yalnızca yeni öğrendiklerini ekle/güncelle. Bu profil bir sonraki görüşmede sana geri verilecek; hafızan budur.";
+const SYS_COACH="Sen, bir öğrencinin İngilizce Yeterlilik Sınavı (EPE, hedef 70/100) hazırlığına eşlik eden kişisel İngilizce koçusun ve hocasısın. Türkçe konuşursun; sıcak, motive edici ama dürüst ve nettsin. Öğrencinin nerede kaldığını, güçlü ve zayıf yanlarını bilir, buna göre SOMUT ve kişiye özel yönlendirme yaparsın (hangi gün, hangi gramer modülü, hangi sınav bölümü, hangi kelime seviyesi). Asla genel-geçer laf etme; sana verilen ilerleme verisine ve hafızandaki profile dayan. Kısa-orta uzunlukta, gerekiyorsa madde madde yaz. Markdown başlık (#) kullanma. ÇOK ÖNEMLİ: Cevabının en sonuna, kullanıcıya gösterilmeyecek tek bir satır olarak '###HAFIZA###' yaz; ardından öğrenci hakkındaki GÜNCEL profili kısa maddelerle yeniden yaz (güçlü yönler, zayıf yönler, nerede kaldığı, hedefleri, ÖĞRENME TARZI — nasıl öğrenmeyi seviyor, neyle motive oluyor — ve kişisel notlar/tercihler). Önceki profildeki bilgileri koru, yalnızca yeni öğrendiklerini ekle/güncelle. Bu profil bir sonraki görüşmede sana geri verilecek; hafızan budur.";
+/* ===== SÜPER ZEKÂ: öğrenci hakkındaki birleşik bilgi (her AI noktası kullanır) ===== */
+function weakModules(){
+  const ms=activeMistakes();
+  return GRAMMAR.map(g=>({g:g,m:moduleMastery(g.id),mis:ms.filter(x=>x.mod===g.id).length}))
+    .filter(o=>o.m.level<2||o.mis>0)
+    .sort((a,b)=>(a.m.level-b.m.level)||(b.mis-a.mis));
+}
+function weakTopics(){
+  return TOPICS.map((t,ti)=>({ti:ti,name:t.name,m:topicMastery(ti)}))
+    .filter(o=>o.m.level<2&&o.m.seen>0).sort((a,b)=>a.m.frac-b.m.frac);
+}
+function learnerBrief(){
+  const wi=currentWeekIndex(),w=PLAN[wi];const phase=PHASES.find(p=>p.weeks.includes(w.n))||PHASES[0];
+  const op=overallProgress();const mc=masteryCounts();
+  const vl={A2:[0,0],B1:[0,0],B2:[0,0]};
+  TOPICS.forEach((d,ti)=>d.words.forEach(wd=>{const a=vl[wd.lvl];if(a){a[1]++;if(S.known[ti+":"+wd.en])a[0]++;}}));
+  const di=todayDayIndexInWeek(wi);let todayT="(bugün program dışı bir gün)";
+  if(di>=0){const day=PLAN[wi].days[di];todayT=day.d+" → "+day.t.join(" | ");}
+  const ms=activeMistakes();
+  const wm=weakModules().slice(0,4).map(o=>o.g.title+(o.mis?(' ['+o.mis+' hata]'):'')).join('; ')||'belirgin zayıf yok';
+  const wt=weakTopics().slice(0,3).map(o=>o.name).join('; ')||'-';
+  const qz=Object.keys(S.scores).map(id=>{const q=QUIZZES.find(x=>x.id===id);return q?(q.name+" "+S.scores[id]+"/"+q.questions.length):null;}).filter(Boolean);
+  return [
+   "Sınava kalan gün: "+daysLeft()+".",
+   "Program: %"+op.pct+" tamam"+(S.flexMode?" (esnek mod açık)":"")+"; şu an "+phase.name+", Hafta "+w.n+": "+w.title+".",
+   "Bugünün planı: "+todayT+".",
+   "GRAMER ustalık: 🥇"+mc[3]+" 🥈"+mc[2]+" 🥉"+mc[1]+" (/"+GRAMMAR.length+" modül). Bugün vadesi gelen tekrar: "+dueCount()+".",
+   "ÖNCELİKLİ ZAYIF gramer: "+wm+".",
+   "Hata defteri: "+ms.length+" açık yanlış"+(ms.length?(" — örnekler: "+ms.slice(0,3).map(m=>m.q).join(" | ")):"")+".",
+   "KELİME: bilinen "+knownCount()+"/"+totalWords()+" (A2 "+vl.A2[0]+"/"+vl.A2[1]+", B1 "+vl.B1[0]+"/"+vl.B1[1]+", B2 "+vl.B2[0]+"/"+vl.B2[1]+"); zayıf konular: "+wt+"; kelime tekrarı bekleyen: "+vDueCount()+".",
+   "DENEME sonuçları: "+(qz.length?qz.join("; "):"henüz yok")+".",
+   "Seri: "+((S.streak&&S.streak.n)||0)+" gün · XP "+(S.xp||0)+".",
+   "Program çerçevesi: 18 Haz–24 Ağu 2026, 10 hafta. En kritik gramer G12 Conditionals (Closest Meaning'in kalbi). Sınav bölümleri: Cloze, Closest Meaning (en zor), Reading, Paragraph Completion, Listening, Writing. Hedef 70/100."
+  ].join("\n");
+}
+function learnerProfileText(){return (S.coach&&S.coach.profile&&S.coach.profile.trim())||"(öğrenci profili henüz boş — gözlemledikçe öğren)";}
+function brainSys(focus){
+  return SYS_TUTOR
+   +" Sen aynı zamanda bu öğrenciyi yakından tanıyan sitenin kişisel zekâsısın: nerede kaldığını, güçlü/zayıf yönlerini ve öğrenme tarzını bilirsin. Cevabını DAİMA aşağıdaki veriye ve profile göre kişiselleştir; uygun olduğunda zayıf bir noktasına nazikçe köprü kur ve onu sürece bağla. Genel-geçer konuşma."
+   +"\n\n=== ÖĞRENCİ VERİSİ ===\n"+learnerBrief()
+   +"\n\n=== ÖĞRENCİ PROFİLİ (öğrenme tarzı, hedefler, kişisel notlar) ===\n"+learnerProfileText()
+   +(focus?("\n\n=== ŞU ANKİ BAĞLAM ===\n"+focus):"");
+}
+function learnerMini(){const wm=weakModules().slice(0,2).map(o=>o.g.title).join(', ');return " (Bağlam: EPE B1-B2 hazırlığındaki Türk öğrenci; öncelikli zayıf alanları: "+(wm||'henüz belirsiz')+". Seviyesine uygun, kişisel ve kısa konuş.)";}
+/* Proaktif içgörü — AI harcamadan, veriden gelen 'bugünün önceliği' */
+function brainInsight(){
+  const due=dueCount(),vdue=vDueCount(),mist=activeMistakes().length,dl=daysLeft();
+  if(due>=3)return {t:"Gramerde <b>"+due+" soru</b> tam unutmadan tekrar zamanı geldi. Önce onları tazele.",b:"⏰ Günün Tekrarı",f:"startDueReview()"};
+  if(mist>=3)return {t:"Hata defterinde <b>"+mist+" açık yanlış</b> var. Sınav öncesi en hızlı puan: onları kapatmak.",b:"🔧 Yanlışlarımı çöz",f:"switchTo('grammar');setTimeout(startMistakeReview,200)"};
+  const wm=weakModules();
+  if(wm.length)return {t:"En zayıf gramer alanın: <b>"+esc(wm[0].g.title)+"</b>. Bugün bunu sağlamlaştıralım.",b:"📚 "+esc(wm[0].g.title),f:"switchTo('grammar');setTimeout(function(){startGrammarLesson('"+wm[0].g.id+"')},200)"};
+  if(vdue>=5)return {t:"<b>"+vdue+" kelime</b> tekrar zamanı geldi — kalıcılık için ideal an.",b:"⏰ Kelime Tekrarı",f:"switchTo('vocab');setTimeout(startVocabReview,200)"};
+  return {t:"Harika gidiyorsun! Sınava <b>"+dl+" gün</b> — bugün bir gramer modülü veya deneme ile temponu koru.",b:"📚 Gramere git",f:"switchTo('grammar')"};
+}
 function coachContext(){
   const wi=currentWeekIndex(),w=PLAN[wi];const phase=PHASES.find(p=>p.weeks.includes(w.n))||PHASES[0];
   const op=overallProgress();
@@ -1933,7 +1987,7 @@ async function coachSend(){
   inp.value="";
   S.coach.history.push({role:"user",text});S.coach.history.push({role:"bot",text:"…"});save();renderCoachChat();
   const hist=S.coach.history.filter(m=>m.text!=="…").slice(-24);
-  const sys=SYS_COACH+"\n\n=== GÜNCEL DURUM (program ve ilerleme verisi) ===\n"+coachContext()+"\n\n=== HAFIZAN: öğrenci profili (önceki notların) ===\n"+((S.coach.profile&&S.coach.profile.trim())||"(henüz boş — bu ilk görüşmeniz olabilir)");
+  const sys=SYS_COACH+"\n\n=== GÜNCEL DURUM (program ve ilerleme verisi) ===\n"+learnerBrief()+"\n\n=== HAFIZAN: öğrenci profili (önceki notların) ===\n"+((S.coach.profile&&S.coach.profile.trim())||"(henüz boş — bu ilk görüşmeniz olabilir)");
   try{
     const r=await geminiChat(hist,sys);
     const m=r.match(/#{2,}\s*HAF[İIı]ZA\s*#*/i);
@@ -2014,8 +2068,9 @@ function renderDash(){
   const el=document.getElementById("dash");
   el.innerHTML=`
   <div class="card" style="border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-soft),var(--shadow)">
-    <div class="eyebrow">🎓 Kişisel AI Koçun <span class="ai-badge">hafızalı</span></div>
-    <p class="muted" style="margin:.2em 0 10px;font-size:13px">Programa ve ilerlemene hâkim gerçek bir hoca gibi: nerede kaldığını, güçlü ve zayıf yönlerini hatırlar; sana özel yönlendirir.</p>
+    <div class="eyebrow">🧠 Sitenin Süper Zekâsı <span class="ai-badge">seni tanır</span></div>
+    <p class="muted" style="margin:.2em 0 10px;font-size:13px">Tüm ilerlemeni, hata defterini, ustalığını ve öğrenme tarzını bilen tek bir zekâ — site genelinde her AI bu bilgiyle sana özel davranır.</p>
+    ${(function(){const ins=brainInsight();return '<div style="background:var(--ink);color:#fff;border-radius:12px;padding:11px 14px;margin-bottom:10px"><div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--amber);text-transform:uppercase">Bugünün önceliği</div><div style="margin:4px 0 8px;font-size:14px">'+ins.t+'</div><button class="btn amber" style="padding:7px 12px;font-size:13px" onclick="'+ins.f+'">'+ins.b+'</button></div>';})()}
     ${hasKey()?`
       <div class="ai-row" style="margin-bottom:8px">
         <button class="btn ghost" onclick="coachQuick('Bugün tam olarak ne çalışmalıyım? Program ve ilerlememe göre net, kısa bir yapılacaklar listesi ver.')">Bugün ne yapmalıyım?</button>
@@ -2234,7 +2289,7 @@ function renderVocabReview(){
 }
 function vrFlip(){VR.flipped=!VR.flipped;renderVocabReview();}
 function vrGrade(ok){const it=VR.list[VR.i];VR.total++;if(ok){VR.correct++;S.known[it.vid]=true;}vsrsUpdate(it.vid,ok);save();VR.i++;VR.flipped=false;if(VR.i>=VR.list.length)return endVocabReview();renderVocabReview();}
-async function vrExample(){const out=document.getElementById('vrEx');if(!out)return;const it=VR.list[VR.i];if(!hasKey()){out.innerHTML=aiOffBox();return;}out.innerHTML='<div class="ai-hint"><span class="spin"></span>Örnek üretiliyor…</div>';try{const r=await gemini("'"+it.w.en+"' kelimesini kullanan, "+it.w.lvl+" seviyesinde 1 kısa İngilizce örnek cümle yaz, hemen altına parantez içinde Türkçesini ekle. Sadece cümleyi ver.",SYS_TUTOR);out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}catch(e){out.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}}
+async function vrExample(){const out=document.getElementById('vrEx');if(!out)return;const it=VR.list[VR.i];if(!hasKey()){out.innerHTML=aiOffBox();return;}out.innerHTML='<div class="ai-hint"><span class="spin"></span>Örnek üretiliyor…</div>';try{const r=await gemini("'"+it.w.en+"' kelimesini kullanan, "+it.w.lvl+" seviyesinde 1 kısa İngilizce örnek cümle yaz, hemen altına parantez içinde Türkçesini ekle. Sadece cümleyi ver.",SYS_TUTOR+learnerMini());out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}catch(e){out.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}}
 function endVocabReview(){
   const pct=Math.round(VR.correct/Math.max(1,VR.total)*100);S.xp=(S.xp||0)+VR.correct*5;bumpStreak();save();
   document.getElementById("learnOverlay").innerHTML=`<div class="learn-wrap" style="text-align:center">
@@ -2325,7 +2380,7 @@ async function vAiExamples(en,lvl){
   if(!hasKey()){box.innerHTML=aiOffBox();return;}
   box.innerHTML='<div class="ai-hint"><span class="spin"></span>Örnekler üretiliyor...</div>';
   try{
-    const r=await gemini("'"+en+"' kelimesini kullanan, "+lvl+" seviyesine uygun 3 kısa İngilizce örnek cümle yaz. Her İngilizce cümlenin hemen altına parantez içinde Türkçe çevirisini ekle. Sadece cümleleri ver, başlık yazma.",SYS_TUTOR);
+    const r=await gemini("'"+en+"' kelimesini kullanan, "+lvl+" seviyesine uygun 3 kısa İngilizce örnek cümle yaz. Her İngilizce cümlenin hemen altına parantez içinde Türkçe çevirisini ekle. Sadece cümleleri ver, başlık yazma.",SYS_TUTOR+learnerMini());
     box.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';
   }catch(e){box.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
 }
@@ -2335,7 +2390,7 @@ async function vAiCheck(en){
   if(!hasKey()){fb.innerHTML=aiOffBox();return;}
   fb.innerHTML='<div class="ai-hint"><span class="spin"></span>Kontrol ediliyor...</div>';
   try{
-    const r=await gemini("Bir öğrenci '"+en+"' kelimesini kullanarak şu cümleyi yazdı: \""+s+"\". Şunları yap: 1) Cümle dilbilgisi/anlam açısından doğru mu ve kelime doğru kullanılmış mı, kısaca belirt. 2) Hata varsa düzeltilmiş halini ver. 3) Tek cümlelik cesaretlendirici geri bildirim. Türkçe açıkla, kısa tut.",SYS_TUTOR);
+    const r=await gemini("Bir öğrenci '"+en+"' kelimesini kullanarak şu cümleyi yazdı: \""+s+"\". Şunları yap: 1) Cümle dilbilgisi/anlam açısından doğru mu ve kelime doğru kullanılmış mı, kısaca belirt. 2) Hata varsa düzeltilmiş halini ver. 3) Tek cümlelik cesaretlendirici geri bildirim. Türkçe açıkla, kısa tut.",brainSys());
     fb.innerHTML='<div class="ai-fb neutral">'+esc(r)+'</div>';
   }catch(e){fb.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
 }
@@ -2495,7 +2550,7 @@ async function learnAiIntro(){
   const out=document.getElementById("learnAiOut");if(!out)return;
   out.innerHTML='<div class="ai-hint"><span class="spin"></span>AI dersi hazırlıyor...</div>';
   const list=L.objs.map(w=>w.en+" ("+w.tr+")").join(", ");
-  try{const r=await gemini("Bir Türk öğrenciye şu 5 İngilizce kelimeyi öğret: "+list+". Her kelime için: kısa Türkçe anlamı + 1 kolay İngilizce örnek cümle (parantez içinde Türkçesi). Sade ve kısa yaz, başlık koyma.",SYS_TUTOR);out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}
+  try{const r=await gemini("Bir Türk öğrenciye şu 5 İngilizce kelimeyi öğret: "+list+". Her kelime için: kısa Türkçe anlamı + 1 kolay İngilizce örnek cümle (parantez içinde Türkçesi). Sade ve kısa yaz, başlık koyma.",SYS_TUTOR+learnerMini());out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}
   catch(e){out.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
 }
 function learnNext(){if(L.step<3){L.step++;renderLearnStep();}}
@@ -3007,7 +3062,7 @@ async function lWriteCheck(){
   if(out)out.innerHTML='<div class="ai-hint"><span class="spin"></span>AI cümleni kontrol ediyor…</div>';
   ta.disabled=true;
   const prompt="Öğrenci '"+(it.rule||'')+"' gramer kuralını kullanarak şu İngilizce cümleyi yazdı:\n\""+text+"\"\n\nKısa Türkçe geri bildirim ver: Cümle bu kurala uygun ve doğru mu? Hata varsa düzeltilmiş hâlini yaz ve nedenini tek cümleyle açıkla. En sonda kalın olarak '✅ Doğru' veya '✏️ Düzeltildi' yaz.";
-  try{const r=await gemini(prompt,SYS_TUTOR);if(out)out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}
+  try{const r=await gemini(prompt,brainSys());if(out)out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}
   catch(e){if(out)out.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
   btn.textContent='Devam →';btn.className='bigbtn green';btn.onclick=lessonNext;
 }
@@ -3032,8 +3087,8 @@ async function lAsk(preset){
   if(inp&&!preset)inp.value="";
   if(!hasKey()){out.innerHTML=aiOffBox();return;}
   out.innerHTML='<div class="ai-hint"><span class="spin"></span>Yanıtlanıyor...</div>';
-  const prompt="Bir İngilizce gramer alıştırması sırasında öğrenci soru soruyor.\n\nBAĞLAM: "+lessonAskContext()+"\n\nÖĞRENCİNİN SORUSU: "+q+"\n\nKısa, net ve Türkçe açıkla; gerekiyorsa tek örnek ver.";
-  try{const r=await gemini(prompt,SYS_TUTOR);out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}
+  const prompt="Bir İngilizce gramer alıştırması sırasında öğrenci soru soruyor.\n\nBAĞLAM: "+lessonAskContext()+"\n\nÖĞRENCİNİN SORUSU: "+q+"\n\nKısa, net ve Türkçe açıkla; gerekiyorsa tek örnek ver. Öğrencinin seviyesine ve zayıf yönlerine göre uyarla.";
+  try{const r=await gemini(prompt,brainSys());out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}
   catch(e){out.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
 }
 function lessonNext(){LSN.i++;LSN.answered=false;LSN.sel=null;LSN.built=[];if(LSN.i>=LSN.items.length)return endLesson();renderLesson();}
@@ -3169,7 +3224,7 @@ function renderGramAI(id){
     <div class="chat-in"><input id="chatin_${id}" placeholder="Sorunu yaz, Enter'a bas..." onkeydown="if(event.key==='Enter')gSend('${id}')"><button class="btn dark" onclick="gSend('${id}')">Gönder</button></div>`;
   renderChat(id);
 }
-function gChatSys(id){const g=GRAMMAR.find(x=>x.id===id);return SYS_TUTOR+" Şu an öğrenciye '"+g.title+"' ("+g.lvl+") konusunu çalıştırıyorsun. Konu özeti: "+strip(g.summary)+" Cevaplarını bu konuya odakla, kısa tut.";}
+function gChatSys(id){const g=GRAMMAR.find(x=>x.id===id);return brainSys("Şu an öğrenciye '"+g.title+"' ("+g.lvl+") konusunu çalıştırıyorsun. Konu özeti: "+strip(g.summary)+" Cevaplarını bu konuya ve öğrencinin bu konudaki durumuna odakla, kısa tut.");}
 function renderChat(id){const box=document.getElementById("chat_"+id);if(!box)return;const h=chatHist[id]||[];box.innerHTML=h.length?h.map(m=>`<div class="bubble ${m.role==='bot'?'bot':'user'}">${m.text==='…'?'<span class="spin"></span>':esc(m.text)}</div>`).join(""):'<div class="ai-hint">Yukarıdaki butonlardan birine bas ya da soru yaz.</div>';box.scrollTop=box.scrollHeight;}
 function gQuick(id,text){const inp=document.getElementById("chatin_"+id);if(inp)inp.value=text;gSend(id);}
 async function gSend(id){
