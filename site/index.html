@@ -1524,7 +1524,7 @@ const GDET={
 /* ============================== DURUM / KAYIT ============================== */
 const KEY="epe_state_v1";
 let S=load();
-function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash"}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash"}}}
+function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false}}}
 function save(){S._updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(S));schedulePush();}
 
 /* ============================== BULUT SENKRON (Supabase + e-posta/şifre girişi) ============================== */
@@ -1961,6 +1961,26 @@ function overallProgress(){
   PLAN.forEach((w,wi)=>{const p=weekProgress(wi);total+=p.total;done+=p.done;});
   return{total,done,pct:total?Math.round(done/total*100):0};
 }
+/* ---- ESNEK PROGRAM ---- */
+function blockDone(wi,di){return PLAN[wi].days[di].t.every((_,ti)=>!!S.tasks["w"+PLAN[wi].n+"d"+di+"t"+ti]);}
+function pendingBlocks(){
+  const arr=[];
+  PLAN.forEach((w,wi)=>w.days.forEach((d,di)=>{ if(!blockDone(wi,di)) arr.push({wi,di,wn:w.n,wtitle:w.title,d}); }));
+  return arr;
+}
+function lastStudyDate(){const e=stripTime(EXAM);e.setDate(e.getDate()-1);return e;} // sınavdan önceki son gün
+function flexSchedule(){
+  const start=stripTime(new Date());
+  let last=lastStudyDate(); if(last<start) last=start;
+  const daysAvail=Math.round((last-start)/86400000)+1;
+  const blocks=pendingBlocks(); const n=blocks.length;
+  const days=[]; for(let off=0;off<daysAvail;off++){const dt=new Date(start);dt.setDate(dt.getDate()+off);days.push({off,date:dt,blocks:[]});}
+  blocks.forEach((b,i)=>{let off=n?Math.floor(i*daysAvail/n):0; if(off>daysAvail-1)off=daysAvail-1; days[off].blocks.push(b);});
+  return {start,last,daysAvail,n,days,perDay:daysAvail?n/daysAvail:0};
+}
+function fmtDate(d){return d.toLocaleDateString("tr-TR",{day:"numeric",month:"short",weekday:"short"});}
+function flexTodayBlocks(){const sc=flexSchedule();const t=sc.days.find(x=>x.off===0);return t?t.blocks:[];}
+function toggleFlex(){S.flexMode=!S.flexMode;save();renderPlan();if(document.getElementById("dash").classList.contains("active"))renderDash();}
 function knownCount(){let c=0;TOPICS.forEach((d,ti)=>d.words.forEach(w=>{if(S.known[ti+":"+w.en])c++;}));return c;}
 function totalWords(){return TOPICS.reduce((s,d)=>s+d.words.length,0);}
 function gramDone(){return GRAMMAR.filter(g=>S.gram[g.id]).length;}
@@ -2032,8 +2052,15 @@ function renderDash(){
   renderCoachChat();renderCoachMem();
 }
 function renderTodayTasks(wi){
+  if(S.flexMode){
+    const blocks=flexTodayBlocks();
+    if(!blocks.length)return `<p class="muted">🎉 Esnek modda bugüne düşen görev yok — tüm bloklar tamamlanmış görünüyor. Harikasın!</p>`;
+    return `<div class="muted" style="font-size:12px;margin-bottom:6px">📅 Esnek mod • bugün ${blocks.length} blok</div>`+
+      blocks.map(b=>`<div class="day today"><div class="dn"><span class="mock-flag" style="background:var(--amber-soft);color:var(--ink2)">H${b.wn} · ${b.d.d}</span>${b.d.mock?'<span class="mock-flag">'+b.d.mock+'</span>':''}</div>
+      ${b.d.t.map((t,ti)=>taskHTML(b.wn,b.di,ti,t)).join("")}</div>`).join("");
+  }
   const di=todayDayIndexInWeek(wi);
-  if(di<0)return `<p class="muted">Bugün için planlı bir gün görünmüyor (program 18 Haz – 24 Ağu arası). Program sekmesinden istediğin haftaya bakabilirsin.</p>`;
+  if(di<0)return `<p class="muted">Bugün için planlı bir gün görünmüyor (program 18 Haz – 24 Ağu arası). Program sekmesinden istediğin haftaya bakabilirsin — ya da <a href="javascript:void(0)" onclick="toggleFlex();switchTo('plan')" style="color:var(--amber);font-weight:700">esnek modu</a> aç, kalan her şeyi günlere yeniden dağıtsın.</p>`;
   const day=PLAN[wi].days[di];
   return `<div class="day today"><div class="dn">${day.d}${day.mock?'<span class="mock-flag">'+day.mock+'</span>':''}</div>
     ${day.t.map((t,ti)=>taskHTML(PLAN[wi].n,di,ti,t)).join("")}</div>`;
@@ -2047,7 +2074,16 @@ function taskHTML(wn,di,ti,text){
 /* ============================== PROGRAM ============================== */
 function renderPlan(){
   const el=document.getElementById("plan");const cwi=currentWeekIndex();
-  let html=`<div class="card"><div class="eyebrow">9,5 haftalık yol haritası</div>
+  const toggle=`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div>
+        <div class="eyebrow">Esnek Program</div>
+        <p class="muted" style="margin:.2em 0 0;font-size:13px">Geride mi kaldın? Aç — kalan tüm görevleri bugünden sınava kadar yeniden dağıtır.</p>
+      </div>
+      <button class="btn ${S.flexMode?'green':'ghost'}" onclick="toggleFlex()">${S.flexMode?'✓ Esnek mod açık':'📅 Esnek modu aç'}</button>
+    </div></div>`;
+  if(S.flexMode){el.innerHTML=toggle+renderFlexPlan();return;}
+  let html=toggle+`<div class="card"><div class="eyebrow">9,5 haftalık yol haritası</div>
     <p class="muted" style="margin:.2em 0 0">Her görevin yanındaki kutucuğu işaretle — ilerlemen otomatik kaydedilir. <span style="color:var(--amber);font-weight:700">Turuncu çerçeveli</span> hafta bu hafta.</p></div>`;
   PHASES.forEach(ph=>{
     html+=`<div class="phase"><h2>${ph.name}</h2><div class="when">${ph.when}</div></div>`;
@@ -2075,7 +2111,46 @@ function renderPlan(){
   });
   el.innerHTML=html;
 }
+function renderFlexPlan(){
+  const sc=flexSchedule();
+  if(sc.n===0)return `<div class="card" style="border-color:var(--green)"><div class="eyebrow" style="color:var(--green)">🎉 Tamamlandı</div><p style="margin:.2em 0">Programdaki tüm görevleri bitirdin! İstersen denemelere ve tekrara ağırlık ver.</p></div>`;
+  const perDay=Math.ceil(sc.perDay);
+  const compress=sc.n>sc.daysAvail;
+  const banner=compress
+    ? `<div class="card" style="background:var(--amber-soft);border-color:var(--amber)">
+        <div class="eyebrow" style="color:var(--ink2)">⚡ Sıkıştırıldı</div>
+        <p style="margin:.2em 0">Kalan <strong>${sc.n} görev günü</strong>, sınava kadarki <strong>${sc.daysAvail} güne</strong> sığdırıldı → günde ortalama <strong>~${perDay} blok</strong>. Tempoyu biraz artırman gerekiyor 💪</p>
+        <p class="muted" style="margin:.2em 0;font-size:12.5px">Görev bittikçe kalanlar otomatik yeniden dağılır; bir blok bitirdikçe yük hafifler.</p>
+      </div>`
+    : `<div class="card" style="border-color:var(--green)">
+        <div class="eyebrow" style="color:var(--green)">🌿 Rahat tempo</div>
+        <p style="margin:.2em 0">Kalan <strong>${sc.n} görev günü</strong>, <strong>${sc.daysAvail} güne</strong> yayıldı. Aradaki boş günler dinlenme/esneme payın — istersen öne çekip erken bitirebilirsin.</p>
+      </div>`;
+  const todayStr=stripTime(new Date()).getTime();
+  let html=banner;
+  let restRun=0;
+  sc.days.forEach(day=>{
+    if(!day.blocks.length){restRun++;return;}
+    if(restRun>0){html+=`<div class="muted" style="text-align:center;font-size:12px;margin:6px 0">💤 ${restRun} dinlenme / serbest gün</div>`;restRun=0;}
+    const isToday=stripTime(day.date).getTime()===todayStr;
+    html+=`<div class="week ${isToday?'now open':'open'}">
+      <div class="week-head" style="cursor:default">
+        <span class="wn">${fmtDate(day.date)}</span>
+        ${isToday?'<span class="now-tag">bugün</span>':''}
+        <span class="wr">${day.blocks.length>1?day.blocks.length+' blok':''}</span>
+      </div>
+      <div class="week-body" style="display:block">
+        ${day.blocks.map(b=>`<div class="day">
+          <div class="dn"><span class="mock-flag" style="background:var(--amber-soft);color:var(--ink2)">H${b.wn} · ${b.d.d}</span> ${esc(b.wtitle)}${b.d.mock?'<span class="mock-flag">'+b.d.mock+'</span>':''}</div>
+          ${b.d.t.map((t,ti)=>taskHTML(b.wn,b.di,ti,t)).join("")}
+        </div>`).join("")}
+      </div></div>`;
+  });
+  if(restRun>0){html+=`<div class="muted" style="text-align:center;font-size:12px;margin:6px 0">💤 ${restRun} dinlenme / serbest gün (sınav öncesi)</div>`;}
+  return html;
+}
 function toggleWeek(n){document.getElementById("wk"+n).classList.toggle("open");}
+function switchTo(id){const b=document.querySelector('nav.tabs .t[data-tab="'+id+'"]');if(b)b.click();}
 function fmtRange(w){
   const o={day:"numeric",month:"long"};
   return new Date(w.start).toLocaleDateString("tr-TR",o)+" – "+new Date(w.end).toLocaleDateString("tr-TR",o);
