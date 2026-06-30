@@ -407,6 +407,7 @@
   <button class="t" data-tab="vocab">Kelimeler</button>
   <button class="t" data-tab="reading">Okuma</button>
   <button class="t" data-tab="quiz">Denemeler</button>
+  <button class="t" data-tab="journal">Günlük</button>
 </nav>
 
 <div class="wrap">
@@ -416,6 +417,7 @@
   <section id="vocab"></section>
   <section id="reading"></section>
   <section id="quiz"></section>
+  <section id="journal"></section>
 </div>
 
 <footer>İlerlemen bu tarayıcıya otomatik kaydedilir. · "Az ama her gün."</footer>
@@ -1539,7 +1541,7 @@ const GDET={
 /* ============================== DURUM / KAYIT ============================== */
 const KEY="epe_state_v1";
 let S=load();
-function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[],vsrs:o.vsrs||{}}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[],vsrs:{}}}}
+function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[],vsrs:o.vsrs||{},journal:o.journal||{}}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[],vsrs:{},journal:{}}}}
 function save(){S._updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(S));schedulePush();}
 
 /* ============================== BULUT SENKRON (Supabase + e-posta/şifre girişi) ============================== */
@@ -1948,6 +1950,7 @@ function brainInsight(){
   const wm=weakModules();
   if(wm.length)return {t:"En zayıf gramer alanın: <b>"+esc(wm[0].g.title)+"</b>. Bugün bunu sağlamlaştıralım.",b:"📚 "+esc(wm[0].g.title),f:"switchTo('grammar');setTimeout(function(){startGrammarLesson('"+wm[0].g.id+"')},200)"};
   if(vdue>=5)return {t:"<b>"+vdue+" kelime</b> tekrar zamanı geldi — kalıcılık için ideal an.",b:"⏰ Kelime Tekrarı",f:"switchTo('vocab');setTimeout(startVocabReview,200)"};
+  if(!journalWrittenToday())return {t:"Bugün günlüğünü yazmadın — birkaç İngilizce cümle yazma kasını güçlendirir (Writing 20 puan).",b:"✍️ Günlük yaz",f:"switchTo('journal')"};
   return {t:"Harika gidiyorsun! Sınava <b>"+dl+" gün</b> — bugün bir gramer modülü veya deneme ile temponu koru.",b:"📚 Gramere git",f:"switchTo('grammar')"};
 }
 function coachContext(){
@@ -2111,7 +2114,7 @@ function renderDash(){
 
   <div class="card">
     <div class="eyebrow">Bugünün görevleri</div>
-    ${reviewNudge()}${renderTodayTasks(wi)}
+    ${reviewNudge()}${journalNudge()}${renderTodayTasks(wi)}
   </div>
 
   <div class="card" style="background:var(--ink);color:#fff;border:none">
@@ -2125,6 +2128,84 @@ function reviewNudge(){
   const d=dueCount(),v=vDueCount();if(!d&&!v)return '';
   const parts=[];if(d)parts.push(`<span onclick="switchTo('grammar')" style="cursor:pointer">gramerde <b>${d}</b> soru</span>`);if(v)parts.push(`<span onclick="switchTo('vocab')" style="cursor:pointer">kelimede <b>${v}</b> kart</span>`);
   return `<div style="background:var(--amber-soft);border:1px solid var(--amber);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:13px;font-weight:600">⏰ Tekrar zamanı: ${parts.join(' · ')} — dokun ve aralıklı tekrarı çöz.</div>`;
+}
+/* ===== GÜNLÜK (Daily Journal) — yazma pratiği ===== */
+function dKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function todayKey(){return dKey(stripTime(new Date()));}
+function journalHas(key){const e=S.journal[key];return !!(e&&(((e.today||'').trim())||((e.tomorrow||'').trim())));}
+function journalWrittenToday(){return journalHas(todayKey());}
+function journalCount(){return Object.keys(S.journal).filter(journalHas).length;}
+function journalStreak(){let n=0,d=stripTime(new Date());if(!journalHas(dKey(d)))d=new Date(d.getTime()-86400000);while(journalHas(dKey(d))){n++;d=new Date(d.getTime()-86400000);}return n;}
+function journalNudge(){if(journalWrittenToday())return '';return `<div onclick="switchTo('journal')" style="cursor:pointer;background:#eef4ff;border:1px solid #bcd4f5;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:13px;font-weight:600">✍️ Bugün günlüğünü yazmadın — birkaç İngilizce cümle yaz, yazma serini sürdür.</div>`;}
+function fmtDayKey(key){const p=key.split('-');const d=new Date(+p[0],+p[1]-1,+p[2]);return d.toLocaleDateString('tr-TR',{day:'numeric',month:'long',weekday:'long'});}
+let jSaveTimer=null;
+function renderJournal(){
+  const el=document.getElementById("journal");
+  const key=todayKey();const e=S.journal[key]||{today:'',tomorrow:'',fb:''};
+  const yKey=dKey(new Date(stripTime(new Date()).getTime()-86400000));const y=S.journal[yKey];
+  const streak=journalStreak(),cnt=journalCount();
+  el.innerHTML=`
+  <div class="card" style="border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-soft),var(--shadow)">
+    <div class="eyebrow">✍️ Günlük · Daily Journal <span class="ai-badge">yazma pratiği</span></div>
+    <p class="muted" style="margin:.2em 0 10px;font-size:13px">Her gün İngilizce birkaç cümle yaz — yazma akıcılığını ve EPE Writing'i (20 puan) güçlendirir. AI, senin zayıf gramer alanlarını bilerek düzeltir.</p>
+    <div class="stat-grid">
+      <div class="stat"><div class="v">🔥${streak}</div><div class="k">gün üst üste</div></div>
+      <div class="stat"><div class="v">${cnt}</div><div class="k">toplam gün</div></div>
+      <div class="stat"><div class="v">${journalWrittenToday()?'✓':'—'}</div><div class="k">bugün</div></div>
+    </div>
+  </div>
+  ${y&&((y.tomorrow||'').trim())?`<div class="card" style="background:#eef4ff;border-color:#bcd4f5">
+    <div class="eyebrow" style="color:#3b6fa0">Dün şunları yapacağını yazmıştın 👀</div>
+    <p style="margin:.3em 0;font-size:14px;white-space:pre-wrap">${esc(y.tomorrow)}</p>
+    <p class="muted" style="font-size:12px;margin:0">Bugün ne kadarını yaptın? Aşağıya yaz.</p>
+  </div>`:''}
+  <div class="card">
+    <div class="gsec"><h4>📝 Bugün yaptıklarım · What I did today</h4>
+      <textarea id="jToday" class="writein" placeholder="Today I... / This morning I... / I also...">${esc(e.today||'')}</textarea></div>
+    <div class="gsec" style="margin-top:10px"><h4>🎯 Yarın yapacaklarım · What I'll do tomorrow</h4>
+      <textarea id="jTomorrow" class="writein" placeholder="Tomorrow I will... / I'm going to... / I plan to...">${esc(e.tomorrow||'')}</textarea></div>
+    <div class="ai-hint" style="margin:8px 0">İpucu: İngilizce yaz. Kalıplar: <b>Today I</b> went / studied / learned… · <b>Tomorrow I will</b> review / practise / finish…</div>
+    <div class="ai-row" style="margin-top:6px">
+      <button class="btn green" onclick="jSaveNow()">💾 Kaydet</button>
+      <button class="btn amber" onclick="jAiFeedback()">🤖 AI'ya kontrol ettir & düzelt</button>
+      <span id="jStatus" class="muted" style="font-size:12px;align-self:center"></span>
+    </div>
+    <div id="jFb" style="margin-top:10px">${e.fb?'<div class="ai-out box">'+esc(e.fb)+'</div>':''}</div>
+  </div>
+  ${journalHistory(key)}`;
+  const t1=document.getElementById('jToday'),t2=document.getElementById('jTomorrow');
+  if(t1)t1.oninput=jInput; if(t2)t2.oninput=jInput;
+}
+function jInput(){
+  const key=todayKey();const cur=S.journal[key]||{ts:Date.now(),fb:''};
+  cur.today=(document.getElementById('jToday')||{}).value||'';
+  cur.tomorrow=(document.getElementById('jTomorrow')||{}).value||'';
+  cur.ts=Date.now();S.journal[key]=cur;
+  const st=document.getElementById('jStatus');if(st)st.textContent='yazılıyor…';
+  clearTimeout(jSaveTimer);jSaveTimer=setTimeout(()=>{save();const s=document.getElementById('jStatus');if(s)s.textContent='kaydedildi ✓';},700);
+}
+function jSaveNow(){jInput();clearTimeout(jSaveTimer);save();const s=document.getElementById('jStatus');if(s)s.textContent='kaydedildi ✓';renderDash();}
+async function jAiFeedback(){
+  const key=todayKey();jInput();clearTimeout(jSaveTimer);save();
+  const e=S.journal[key]||{};const today=(e.today||'').trim(),tom=(e.tomorrow||'').trim();
+  const fb=document.getElementById('jFb');
+  if(!today&&!tom){if(fb)fb.innerHTML='<div class="ai-hint">Önce birkaç cümle yaz 🙂</div>';return;}
+  if(!hasKey()){if(fb)fb.innerHTML=aiOffBox();return;}
+  if(fb)fb.innerHTML='<div class="ai-hint"><span class="spin"></span>AI günlüğünü okuyor ve düzeltiyor…</div>';
+  const prompt="Öğrenci İngilizce günlük yazdı.\n\nBUGÜN YAPTIKLARI (today):\n"+(today||'(boş)')+"\n\nYARIN YAPACAKLARI (tomorrow):\n"+(tom||'(boş)')+"\n\nŞunları yap (Türkçe açıkla, düzeltmeleri İngilizce ver, kısa ve cesaretlendirici ol, markdown başlık kullanma):\n1) Bir cümlelik sıcak giriş.\n2) En önemli 2-3 dil hatasını düzelt: yanlış → doğru, kısa neden.\n3) Bir cümleyi daha doğal/üst seviye nasıl söyleyebileceğini göster.\n4) Öğrencinin bilinen zayıf gramer alanlarından biriyle bağ kur ve onu kullanmaya teşvik et.";
+  try{
+    const r=await gemini(prompt,brainSys());
+    S.journal[key].fb=r;S.xp=(S.xp||0)+15;save();
+    if(fb)fb.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';
+  }catch(err){if(fb)fb.innerHTML='<div class="ai-fb bad">⚠️ '+esc(err.message)+'</div>';}
+}
+function journalHistory(todayK){
+  const keys=Object.keys(S.journal).filter(k=>k!==todayK&&journalHas(k)).sort().reverse();
+  if(!keys.length)return '';
+  return `<div class="card"><div class="eyebrow">Geçmiş günlükler · ${keys.length}</div>`+
+    keys.slice(0,30).map(k=>{const e=S.journal[k];return `<details style="padding:6px 0;border-bottom:1px dashed var(--line)"><summary style="cursor:pointer;font-weight:700;font-size:13px">${fmtDayKey(k)}</summary>
+      <div style="margin-top:6px;font-size:13px"><b>Bugün:</b> <span style="white-space:pre-wrap">${esc(e.today||'-')}</span><br><b>Yarın:</b> <span style="white-space:pre-wrap">${esc(e.tomorrow||'-')}</span>${e.fb?'<div class="ai-out box" style="margin-top:6px">'+esc(e.fb)+'</div>':''}</div></details>`;}).join('')+
+    `</div>`;
 }
 function renderTodayTasks(wi){
   if(S.flexMode){
@@ -3339,7 +3420,7 @@ document.querySelectorAll("nav.tabs .t").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("section").forEach(x=>x.classList.remove("active"));
   b.classList.add("active");
   const id=b.dataset.tab;document.getElementById(id).classList.add("active");
-  if(id==="dash")renderDash();if(id==="plan")renderPlan();if(id==="grammar")renderGrammar();if(id==="vocab")renderVocab();if(id==="reading")renderReading();if(id==="quiz")renderQuizList();
+  if(id==="dash")renderDash();if(id==="plan")renderPlan();if(id==="grammar")renderGrammar();if(id==="vocab")renderVocab();if(id==="reading")renderReading();if(id==="quiz")renderQuizList();if(id==="journal")renderJournal();
   window.scrollTo(0,0);
 });
 
