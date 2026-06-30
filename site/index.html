@@ -372,12 +372,22 @@
   <div class="top-inner">
     <h1 class="brand">EPE Çalışma Asistanı<small>İngilizce Yeterlilik Sınavı · Hedef 70</small></h1>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="gear" id="examBtn" onclick="showExamPicker()" title="Sınav türünü değiştir">🎯 EPE</button>
       <button class="gear" onclick="openSettings()">⚙️ AI Ayarı</button>
       <button class="gear" id="logoutBtn" onclick="_authLogout()" title="Çıkış yap" style="display:none">🚪 Çıkış</button>
       <div class="countdown"><div class="num" id="cd">–</div><div class="lbl" id="cdlbl">gün kaldı</div></div>
     </div>
   </div>
 </header>
+
+<div class="modal" id="examPicker">
+  <div class="modal-card">
+    <h3>🎯 Hangi sınava hazırlanıyorsun?</h3>
+    <p class="muted" style="font-size:13px;margin:.3em 0 14px">Programın, geri sayımın ve çalışma araçların buna göre ayarlanır. Sonradan üstteki 🎯 butonundan değiştirebilirsin.</p>
+    <div id="examPickList"></div>
+    <div style="text-align:right;margin-top:6px"><button class="btn ghost" onclick="hideExamPicker()" id="examPickClose">Kapat</button></div>
+  </div>
+</div>
 
 <div class="modal" id="settingsModal">
   <div class="modal-card">
@@ -424,17 +434,17 @@
 
 <script>
 /* ============================== VERİ ============================== */
-const EXAM = new Date(2026,7,24); // 24 Ağustos 2026
+const EPE_EXAM = new Date(2026,7,24); // 24 Ağustos 2026
 
-/* --- PROGRAM --- */
-const PHASES = [
+/* --- PROGRAM (EPE) --- */
+const EPE_PHASES = [
   {name:"Faz 1 — Temel", when:"15 Haz – 5 Tem · gramer temeli kurma", weeks:[1,2,3]},
   {name:"Faz 2 — Geliştirme", when:"6 Tem – 26 Tem · ileri gramer + soru tipleri + yazma", weeks:[4,5,6]},
   {name:"Faz 3 — Sınav Provası", when:"27 Tem – 16 Ağu · yoğun pratik + denemeler", weeks:[7,8,9]},
   {name:"Final", when:"17 – 23 Ağu · tekrar + dinlenme", weeks:[10]},
 ];
 
-const PLAN = [
+const EPE_PLAN = [
 {n:1,title:"Cümlenin temeli + zamanlar (1)",start:"2026-06-15",end:"2026-06-21",days:[
  {d:"Pzt",t:["Gramer: Cümle yapısı (özne+fiil+nesne) + am/is/are","12 yeni kelime (Kelimeler sekmesi)","15 dk kolay İngilizce okuma"]},
  {d:"Sal",t:["Gramer: there is/are + articles (a/an/the)","12 kelime + dünkülerin tekrarı","15 dk yavaş/altyazılı dinleme"]},
@@ -526,6 +536,84 @@ const PLAN = [
  {d:"23 Ağu Paz",t:["DİNLEN. Malzeme hazırla (kalem, kimlik). Erken yat. Yarın sınav! 💪"]},
 ]},
 ];
+
+/* --- PROGRAM (YÖKDİL Fen) — 2026-YÖKDİL/2: 9 Ağustos 2026 --- */
+const YOK_EXAM = new Date(2026,7,9); // 9 Ağustos 2026 (Pazar)
+const YOK_PHASES = [
+  {name:"Faz 1 — Temel & Kelime", when:"29 Haz – 12 Tem · gramer tazeleme + akademik kelime", weeks:[1,2]},
+  {name:"Faz 2 — Soru Tipleri", when:"13 Tem – 26 Tem · tüm YÖKDİL soru tipleri", weeks:[3,4]},
+  {name:"Faz 3 — Deneme & Cila", when:"27 Tem – 9 Ağu · denemeler + tekrar", weeks:[5,6]},
+];
+const YOK_PLAN = [
+{n:1,title:"Temel gramer + kelime başlangıcı",start:"2026-06-29",end:"2026-07-05",days:[
+ {d:"Pzt",t:["Gramer: G01 Cümlenin Temeli + G02 Present Tenses","15 akademik kelime","YÖKDİL tanı: 10 örnek soru çöz (soru tiplerini gör)"]},
+ {d:"Sal",t:["Gramer: G03 Past + G04 Future","15 kelime","Okuma: 1 fen metni (Reading)"]},
+ {d:"Çar",t:["Gramer: G05 Modals","15 kelime","Cümle Tamamlama: 10 soru"]},
+ {d:"Per",t:["Kelime: akademik fiiller + bağlaçlar","15 kelime","Çeviri: 5 cümle EN→TR"]},
+ {d:"Cum",t:["Gramer: G06 Comparatives + G07 Quantifiers","15 kelime","Cloze: 10 soru"]},
+ {d:"Cmt",t:["Hafta tekrarı (Günün Tekrarı)","15 kelime","Diyalog Tamamlama: 5 soru"]},
+ {d:"Paz",t:["Hafif gün: Kelime Tekrarı","Hata defterini gözden geçir"]},
+]},
+{n:2,title:"İleri yapılar + soru tipi tanıma",start:"2026-07-06",end:"2026-07-12",days:[
+ {d:"Pzt",t:["Gramer: G08 Gerund & Infinitive","18 kelime","Restatement (eş anlam): 10 soru"]},
+ {d:"Sal",t:["Gramer: G10 Relative Clauses","18 kelime","Okuma: 1 fen metni"]},
+ {d:"Çar",t:["Gramer: G11 Passive Voice","18 kelime","Çeviri: 5 cümle TR→EN"]},
+ {d:"Per",t:["Gramer: G09 so/such/too/enough","18 kelime","Paragraf Tamamlama: 6 soru"]},
+ {d:"Cum",t:["Karışık gramer tekrarı (Karışık Tekrar)","18 kelime","Cloze + Cümle Tamamlama"]},
+ {d:"Cmt",t:["FAZ 1 MİNİ DEĞERLENDİRME: 30 karışık soru","18 kelime"],mock:"Mini test"},
+ {d:"Paz",t:["Tekrar (hafif gün)","Hata defteri"]},
+]},
+{n:3,title:"Koşullar + tüm soru tipleri",start:"2026-07-13",end:"2026-07-19",days:[
+ {d:"Pzt",t:["Gramer: G12 Conditionals ⭐","18 kelime","Restatement: 10 soru"]},
+ {d:"Sal",t:["Gramer: G12 Mixed Conditionals tekrar","18 kelime","Okuma: 2 fen metni"]},
+ {d:"Çar",t:["Gramer: G13 Reported Speech","18 kelime","Diyalog Tamamlama: 8 soru"]},
+ {d:"Per",t:["Gramer: G14 Causatives","18 kelime","İlgisiz Cümle (anlamca farklı): 8 soru"]},
+ {d:"Cum",t:["Gramer: G15 Connectors","18 kelime","Paragraf Tamamlama: 8 soru"]},
+ {d:"Cmt",t:["Çeviri yoğun: 10 cümle (EN↔TR)","18 kelime"]},
+ {d:"Paz",t:["Tekrar","Hata defteri"]},
+]},
+{n:4,title:"Kelime yoğunluğu + karışık pratik",start:"2026-07-20",end:"2026-07-26",days:[
+ {d:"Pzt",t:["Gramer: G16 Noun & Reduced Clauses","20 kelime","Cloze: 15 soru"]},
+ {d:"Sal",t:["Akademik/fen kelime yoğun çalışma","20 kelime","Okuma: 2 metin (süreli)"]},
+ {d:"Çar",t:["Restatement + Cümle Tamamlama karışık","20 kelime","Çeviri: 8 cümle"]},
+ {d:"Per",t:["Diyalog + İlgisiz Cümle karışık","20 kelime"]},
+ {d:"Cum",t:["Paragraf Tamamlama + Cloze karışık","20 kelime"]},
+ {d:"Cmt",t:["YARIM DENEME: tüm soru tipleri (süreli)","kontrol + hata defteri"],mock:"Yarım deneme"},
+ {d:"Paz",t:["Faz 2 genel tekrar","Hata defteri"]},
+]},
+{n:5,title:"Tam denemeler + zayıf bölüm",start:"2026-07-27",end:"2026-08-02",days:[
+ {d:"Pzt",t:["TAM DENEME 1 — baştan sona süreli çöz"],mock:"TAM DENEME"},
+ {d:"Sal",t:["Deneme kontrolü: TÜM yanlışları hata defterine yaz, sebebini bul"]},
+ {d:"Çar",t:["En zayıf 2 bölüme yoğun pratik","Kelime Tekrarı"]},
+ {d:"Per",t:["Kelime tekrarı + Cloze","Okuma 1 metin"]},
+ {d:"Cum",t:["Restatement + Çeviri tekrarı","Kelime"]},
+ {d:"Cmt",t:["TAM DENEME 2 (süreli)"],mock:"TAM DENEME 2"},
+ {d:"Paz",t:["Kontrol + hata defteri"]},
+]},
+{n:6,title:"Final — Cila & Sınav",start:"2026-08-03",end:"2026-08-09",days:[
+ {d:"3 Ağu Pzt",t:["Hata defterini baştan sona oku","En sık yaptığın 20 hatayı ezberle"]},
+ {d:"4 Ağu Sal",t:["En zayıf bölüme son pratik","Kelime Tekrarı (bilinmeyenler)"]},
+ {d:"5 Ağu Çar",t:["Karışık tekrar: tüm soru tipleri (hafif)","Okuma 1 metin"]},
+ {d:"6 Ağu Per",t:["Hata defteri + gramer özetleri (yeni şey yok)"]},
+ {d:"7 Ağu Cum",t:["Hafif tekrar + kelime","Erken uyku alışkanlığına geç"]},
+ {d:"8 Ağu Cmt",t:["DİNLEN. Malzeme hazırla (kalem, kimlik). Erken yat. Yarın sınav! 💪"]},
+ {d:"9 Ağu Paz",t:["SINAV GÜNÜ 🎯 Başarılar!"]},
+]},
+];
+
+/* --- Çok sınavlı yapılandırma --- */
+const EXAM_CFG = {
+  epe:        {id:"epe",        name:"EPE",        full:"İngilizce Yeterlilik Sınavı", target:"Hedef 70", date:EPE_EXAM, phases:EPE_PHASES, plan:EPE_PLAN,
+               note:"6 bölüm: Cloze, Closest Meaning, Reading, Paragraph Completion, Listening, Writing."},
+  yokdil_fen: {id:"yokdil_fen", name:"YÖKDİL Fen", full:"YÖKDİL Fen Bilimleri",      target:"Akademik İngilizce", date:YOK_EXAM, phases:YOK_PHASES, plan:YOK_PLAN,
+               note:"Tamamı çoktan seçmeli: Kelime, Gramer/Cloze, Cümle Tamamlama, Çeviri, Paragraf Tamamlama, Reading, Diyalog, Restatement, İlgisiz Cümle. Dinleme/Yazma yok."},
+};
+let EXAM, PHASES, PLAN, CUREXAM;
+function applyExam(type){
+  const c=EXAM_CFG[type]||EXAM_CFG.epe;
+  CUREXAM=c; EXAM=c.date; PHASES=c.phases; PLAN=c.plan;
+}
+applyExam("epe"); // varsayılan; S yüklendikten sonra tekrar uygulanır
 
 /* --- KELİMELER (1000-kelime-listesi.md · 20 konu × A2/B1/B2) --- */
 const TOPICS = [
@@ -1541,7 +1629,8 @@ const GDET={
 /* ============================== DURUM / KAYIT ============================== */
 const KEY="epe_state_v1";
 let S=load();
-function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[],vsrs:o.vsrs||{},journal:o.journal||{}}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[],vsrs:{},journal:{}}}}
+applyExam(S.examType||"epe");
+function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[],vsrs:o.vsrs||{},journal:o.journal||{},examType:o.examType||null}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[],vsrs:{},journal:{},examType:null}}}
 function save(){S._updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(S));schedulePush();}
 
 /* ============================== BULUT SENKRON (Supabase + e-posta/şifre girişi) ============================== */
@@ -1640,7 +1729,33 @@ function refreshActive(){
   const id=sec?sec.id:"dash";
   if(id==="dash")renderDash();else if(id==="plan")renderPlan();else if(id==="grammar")renderGrammar();
   else if(id==="vocab")renderVocab();else if(id==="reading")renderReading();else if(id==="quiz")renderQuizList();
-  const dl=daysLeft();const cd=document.getElementById("cd");if(cd)cd.textContent=dl;
+  else if(id==="journal")renderJournal();
+  const dl=daysLeft();const cd=document.getElementById("cd");if(cd)cd.textContent=dl;const cl=document.getElementById("cdlbl");if(cl)cl.textContent=dl<=0?"sınav günü!":"gün kaldı";
+}
+/* ===== Çok sınavlı: sınav seçimi ===== */
+function examInfo(){return CUREXAM||EXAM_CFG.epe;}
+function showExamPicker(){
+  const el=document.getElementById('examPickList');if(!el)return;
+  el.innerHTML=Object.keys(EXAM_CFG).map(k=>{const c=EXAM_CFG[k];const dl=Math.max(0,Math.ceil((stripTime(c.date)-stripTime(new Date()))/86400000));const sel=S.examType===k;
+    return `<div onclick="pickExam('${k}')" style="cursor:pointer;border:2px solid ${sel?'var(--green)':'var(--line)'};background:${sel?'var(--green-soft)':'var(--surface)'};border-radius:14px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:18px">${esc(c.name)}${sel?' ✓':''}</div><div class="muted" style="font-size:12px;white-space:nowrap">${dl} gün kaldı</div></div>
+      <div class="muted" style="font-size:12.5px;margin-top:4px">${esc(c.full)} · ${esc(c.target)}</div>
+      <div class="muted" style="font-size:12px;margin-top:4px">${esc(c.note)}</div>
+    </div>`;}).join('');
+  document.getElementById('examPickClose').style.display=S.examType?'inline-block':'none';
+  document.getElementById('examPicker').classList.add('show');
+}
+function hideExamPicker(){document.getElementById('examPicker').classList.remove('show');}
+function pickExam(type){
+  if(!EXAM_CFG[type])return;
+  S.examType=type;save();applyExam(type);
+  updateExamHeader();hideExamPicker();
+  refreshActive();renderDash();
+}
+function updateExamHeader(){
+  const c=examInfo();
+  const btn=document.getElementById('examBtn');if(btn)btn.textContent='🎯 '+c.name;
+  const br=document.querySelector('.brand');if(br)br.innerHTML=esc(c.name)+' Çalışma Asistanı<small>'+esc(c.full)+' · '+esc(c.target)+'</small>';
 }
 
 /* ---- Panel ---- */
@@ -1727,7 +1842,7 @@ function buildSyncUI(){
 }
 
 /* ---- Zorunlu Giriş Kapısı (mevcut auth fonksiyonlarını kullanır) ---- */
-function authShowApp(){var g=document.getElementById("authGate");if(g)g.classList.remove("show");var lo=document.getElementById("logoutBtn");if(lo)lo.style.display="inline-block";var pill=document.getElementById("syncPill");if(pill)pill.style.display="flex";}
+function authShowApp(){var g=document.getElementById("authGate");if(g)g.classList.remove("show");var lo=document.getElementById("logoutBtn");if(lo)lo.style.display="inline-block";var pill=document.getElementById("syncPill");if(pill)pill.style.display="flex";if(!S.examType)setTimeout(showExamPicker,200);}
 function authShowGate(){var g=document.getElementById("authGate");if(g)g.classList.add("show");var lo=document.getElementById("logoutBtn");if(lo)lo.style.display="none";var pill=document.getElementById("syncPill");if(pill)pill.style.display="none";}
 function authMsg(t,kind){var m=document.getElementById("authMsg");if(m){m.className="auth-msg "+(kind||"");m.innerHTML=t;}}
 function _authTab(which){
@@ -1897,7 +2012,7 @@ function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").repl
 function aiOffBox(){return '<div class="ai-off">🔑 Bu özellik yapay zekâ ile çalışır. Sağ üstten <b>⚙️ AI Ayarı</b>\'na ücretsiz Gemini API anahtarını girersen aktifleşir.</div>';}
 
 /* ============================== AI KOÇ (program farkındalıklı, hafızalı) ============================== */
-const SYS_COACH="Sen, bir öğrencinin İngilizce Yeterlilik Sınavı (EPE, hedef 70/100) hazırlığına eşlik eden kişisel İngilizce koçusun ve hocasısın. Türkçe konuşursun; sıcak, motive edici ama dürüst ve nettsin. Öğrencinin nerede kaldığını, güçlü ve zayıf yanlarını bilir, buna göre SOMUT ve kişiye özel yönlendirme yaparsın (hangi gün, hangi gramer modülü, hangi sınav bölümü, hangi kelime seviyesi). Asla genel-geçer laf etme; sana verilen ilerleme verisine ve hafızandaki profile dayan. Kısa-orta uzunlukta, gerekiyorsa madde madde yaz. Markdown başlık (#) kullanma. ÇOK ÖNEMLİ: Cevabının en sonuna, kullanıcıya gösterilmeyecek tek bir satır olarak '###HAFIZA###' yaz; ardından öğrenci hakkındaki GÜNCEL profili kısa maddelerle yeniden yaz (güçlü yönler, zayıf yönler, nerede kaldığı, hedefleri, ÖĞRENME TARZI — nasıl öğrenmeyi seviyor, neyle motive oluyor — ve kişisel notlar/tercihler). Önceki profildeki bilgileri koru, yalnızca yeni öğrendiklerini ekle/güncelle. Bu profil bir sonraki görüşmede sana geri verilecek; hafızan budur.";
+const SYS_COACH="Sen, bir öğrencinin İngilizce sınav (EPE ya da YÖKDİL gibi) hazırlığına eşlik eden kişisel İngilizce koçusun ve hocasısın. Hangi sınava hazırlandığı ve hedefi sana verilen güncel veride yazar; ona göre konuş. Türkçe konuşursun; sıcak, motive edici ama dürüst ve nettsin. Öğrencinin nerede kaldığını, güçlü ve zayıf yanlarını bilir, buna göre SOMUT ve kişiye özel yönlendirme yaparsın (hangi gün, hangi gramer modülü, hangi sınav bölümü, hangi kelime seviyesi). Asla genel-geçer laf etme; sana verilen ilerleme verisine ve hafızandaki profile dayan. Kısa-orta uzunlukta, gerekiyorsa madde madde yaz. Markdown başlık (#) kullanma. ÇOK ÖNEMLİ: Cevabının en sonuna, kullanıcıya gösterilmeyecek tek bir satır olarak '###HAFIZA###' yaz; ardından öğrenci hakkındaki GÜNCEL profili kısa maddelerle yeniden yaz (güçlü yönler, zayıf yönler, nerede kaldığı, hedefleri, ÖĞRENME TARZI — nasıl öğrenmeyi seviyor, neyle motive oluyor — ve kişisel notlar/tercihler). Önceki profildeki bilgileri koru, yalnızca yeni öğrendiklerini ekle/güncelle. Bu profil bir sonraki görüşmede sana geri verilecek; hafızan budur.";
 /* ===== SÜPER ZEKÂ: öğrenci hakkındaki birleşik bilgi (her AI noktası kullanır) ===== */
 function weakModules(){
   const ms=activeMistakes();
@@ -1930,7 +2045,7 @@ function learnerBrief(){
    "KELİME: bilinen "+knownCount()+"/"+totalWords()+" (A2 "+vl.A2[0]+"/"+vl.A2[1]+", B1 "+vl.B1[0]+"/"+vl.B1[1]+", B2 "+vl.B2[0]+"/"+vl.B2[1]+"); zayıf konular: "+wt+"; kelime tekrarı bekleyen: "+vDueCount()+".",
    "DENEME sonuçları: "+(qz.length?qz.join("; "):"henüz yok")+".",
    "Seri: "+((S.streak&&S.streak.n)||0)+" gün · XP "+(S.xp||0)+".",
-   "Program çerçevesi: 18 Haz–24 Ağu 2026, 10 hafta. En kritik gramer G12 Conditionals (Closest Meaning'in kalbi). Sınav bölümleri: Cloze, Closest Meaning (en zor), Reading, Paragraph Completion, Listening, Writing. Hedef 70/100."
+   "Hazırlanılan sınav: "+examInfo().name+" — "+examInfo().full+" ("+examInfo().target+"). "+examInfo().note+" Gramer sırası G01→G16; G12 Conditionals çoğu soru tipinin (restatement/closest meaning) anahtarı."
   ].join("\n");
 }
 function learnerProfileText(){return (S.coach&&S.coach.profile&&S.coach.profile.trim())||"(öğrenci profili henüz boş — gözlemledikçe öğren)";}
@@ -2119,8 +2234,10 @@ function renderDash(){
 
   <div class="card" style="background:var(--ink);color:#fff;border:none">
     <div class="eyebrow" style="color:var(--amber)">Hatırlatma</div>
-    <p style="margin:.3em 0">Hedef <strong>70/100</strong>. En çok puanı Writing (20) ve Listening (20) getirir — onları ihmal etme. Gramerin omurga: özellikle <strong>5. haftadaki koşul cümleleri</strong> Closest Meaning'in anahtarı.</p>
-    <p style="margin:.3em 0;color:#cdd6e6;font-size:14px">Her gün çözdüğün yanlışları bir "hata defterine" yaz — sınavdan önce sadece onu tekrar etmek bile çok kazandırır.</p>
+    <p style="margin:.3em 0">${examInfo().id==='yokdil_fen'
+      ? 'YÖKDİL tamamen çoktan seçmeli (dinleme/yazma yok). En çok puanı <strong>kelime + okuma + restatement</strong> getirir — akademik/fen kelimeyi ve eş anlam (Closest Meaning) yapısını ihmal etme. Koşul cümleleri (G12) restatement\'ın anahtarı.'
+      : 'Hedef <strong>70/100</strong>. En çok puanı Writing (20) ve Listening (20) getirir — onları ihmal etme. Gramerin omurga: özellikle <strong>koşul cümleleri (G12)</strong> Closest Meaning\'in anahtarı.'}</p>
+    <p style="margin:.3em 0;color:#cdd6e6;font-size:14px">Her gün çözdüğün yanlışları "hata defterine" yaz — sınavdan önce sadece onu tekrar etmek bile çok kazandırır.</p>
   </div>`;
   renderCoachChat();renderCoachMem();
 }
@@ -3438,6 +3555,7 @@ document.addEventListener("change",e=>{
 
 /* ============================== BAŞLAT ============================== */
 function init(){
+  updateExamHeader();
   const dl=daysLeft();
   document.getElementById("cd").textContent=dl;
   document.getElementById("cdlbl").textContent=dl<=0?"sınav günü!":"gün kaldı";
