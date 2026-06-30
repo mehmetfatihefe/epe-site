@@ -1524,7 +1524,7 @@ const GDET={
 /* ============================== DURUM / KAYIT ============================== */
 const KEY="epe_state_v1";
 let S=load();
-function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false}}}
+function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[]}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[]}}}
 function save(){S._updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(S));schedulePush();}
 
 /* ============================== BULUT SENKRON (Supabase + e-posta/şifre girişi) ============================== */
@@ -2041,7 +2041,7 @@ function renderDash(){
 
   <div class="card">
     <div class="eyebrow">Bugünün görevleri</div>
-    ${renderTodayTasks(wi)}
+    ${reviewNudge()}${renderTodayTasks(wi)}
   </div>
 
   <div class="card" style="background:var(--ink);color:#fff;border:none">
@@ -2051,6 +2051,7 @@ function renderDash(){
   </div>`;
   renderCoachChat();renderCoachMem();
 }
+function reviewNudge(){const d=dueCount();if(!d)return '';return `<div onclick="switchTo('grammar')" style="cursor:pointer;background:var(--amber-soft);border:1px solid var(--amber);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:13px;font-weight:600">⏰ Gramerde ${d} soru tekrar zamanı geldi — dokun, "Günün Tekrarı"nı çöz.</div>`;}
 function renderTodayTasks(wi){
   if(S.flexMode){
     const blocks=flexTodayBlocks();
@@ -2466,6 +2467,7 @@ function renderGrammar(){
   const el=document.getElementById("grammar");
   const done=GRAMMAR.filter(g=>S.gram[g.id]).length;
   const st=S.streak||{n:0};
+  const due=dueCount();const mist=activeMistakes().length;
   let html=`<div class="card">
     <div class="eyebrow">Gramer · İnteraktif Dersler <span class="ai-badge">oyunlaştırılmış</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
@@ -2473,9 +2475,25 @@ function renderGrammar(){
       <div style="display:flex;gap:14px"><span class="xp-chip">⭐ ${S.xp||0} XP</span><span class="xp-chip" style="color:var(--red)">🔥 ${st.n||0} gün</span></div>
     </div>
     <div class="bar green" style="margin-top:8px"><i style="width:${Math.round(done/GRAMMAR.length*100)}%"></i></div>
-    <p class="muted" style="margin:10px 0 0;font-size:13px">Her modül Duolingo tarzı bir ders: <b>kuralı gör → çöz → eşleştir</b>. <b>Kalıcılık için tekrar:</b> her konu ders boyunca birden çok kez gelir, <b>yanlış yaptığın soru ders bitmeden tekrar sorulur</b>, sonda da hızlı tekrar turu var.</p>
-    <button class="btn amber" style="margin-top:12px;width:100%" onclick="startReview()">🔁 Karışık Tekrar — bitmiş konuları karıştır</button>
+    <p class="muted" style="margin:10px 0 0;font-size:13px">Her modül Duolingo tarzı bir ders: <b>kuralı gör → çöz → eşleştir</b>. <b>Aralıklı tekrar</b> ile çözdüğün sorular, tam unutmadan önce karşına yeniden çıkar — kalıcı öğrenmenin sırrı.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+      <button class="btn green" style="width:100%" onclick="startDueReview()">⏰ Günün Tekrarı${due?' · '+due+' soru hazır':''}</button>
+      <button class="btn amber" style="width:100%" onclick="startReview()">🔁 Karışık Tekrar — bitmiş konuları karıştır</button>
+    </div>
   </div>`;
+  if(mist){
+    html+=`<div class="card" style="border-color:var(--red)">
+      <div class="eyebrow" style="color:var(--red)">🔧 Hata Defteri · ${mist} soru</div>
+      <p class="muted" style="font-size:13px;margin:.2em 0 10px">Yanlış yaptığın sorular burada birikir; doğru çözünce otomatik silinir. Sınav öncesi en değerli tekrar kaynağın.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn dark" onclick="startMistakeReview()">Yanlışlarımı çöz</button>
+        <button class="btn ghost" onclick="clearMistakes()">Temizle</button>
+      </div>
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px;color:var(--amber);font-weight:700">Listeyi gör</summary>
+        <div style="margin-top:8px">${activeMistakes().slice(0,40).map(m=>`<div style="padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px"><b>H${String(m.mod||'').replace('G','')}</b> · ${esc(m.q||('Cümle: '+(m.tr||'')))}${m.count>1?' <span class="muted">×'+m.count+'</span>':''}</div>`).join('')}</div>
+      </details>
+    </div>`;
+  }
   html+=GRAMMAR.map(g=>{
     const dn=S.gram[g.id];const best=S.lessonBest&&S.lessonBest[g.id];
     return `<div class="skill ${dn?'done':''}" onclick="startGrammarLesson('${g.id}')">
@@ -2507,6 +2525,78 @@ const GBANK={
  G15:[{en:"Although it was cold, we went out.",tr:"Soğuk olsa da çıktık."},{en:"Despite the rain, we walked.",tr:"Yağmura rağmen yürüdük."},{en:"He was tired; however, he continued.",tr:"Yorgundu; ancak devam etti."},{en:"It was late, so we left.",tr:"Geç olmuştu, ayrıldık."},{en:"We stayed in because it rained.",tr:"Yağmur yağdığı için kaldık."},{en:"Moreover, it is cheap.",tr:"Üstelik ucuz."},{en:"Therefore, the plan failed.",tr:"Bu yüzden plan başarısız oldu."},{en:"She likes tea, whereas he likes coffee.",tr:"O çay, diğeri kahve sever."},{en:"First, read the text.",tr:"Önce metni oku."},{en:"In addition, it is fast.",tr:"Ayrıca hızlı."}],
  G16:[{en:"I don't know whether he will come.",tr:"Gelecek mi bilmiyorum."},{en:"What he said was true.",tr:"Söylediği doğruydu."},{en:"Tell me what you want.",tr:"Ne istediğini söyle."},{en:"The man standing there is my uncle.",tr:"Orada duran adam amcam."},{en:"The car parked outside is mine.",tr:"Dışarıdaki araba benim."},{en:"I am not sure if it's correct.",tr:"Doğru mu emin değilim."},{en:"I wonder why she left.",tr:"Neden gittiğini merak ediyorum."},{en:"The woman wearing red is a doctor.",tr:"Kırmızı giyen kadın doktor."},{en:"Do you know where he lives?",tr:"Nerede yaşadığını biliyor musun?"},{en:"What surprised me was his answer.",tr:"Beni şaşırtan cevabıydı."}]
 };
+
+/* ============================== ARALIKLI TEKRAR (SRS) + HATA DEFTERİ ============================== */
+function srsHash(s){let h=5381;s=String(s);for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return (h>>>0).toString(36);}
+function srsIdFor(it){const gid=it.mod||LSN.id;if(!gid||gid.indexOf('__')===0)return it.mod?srsIdRaw(it,it.mod):null;return srsIdRaw(it,gid);}
+function srsIdRaw(it,gid){
+  if(it.type==='mc')return gid+'|mc|'+srsHash(it.q);
+  if(it.type==='build'||it.type==='listen')return gid+'|bd|'+srsHash(it.answer);
+  return null;
+}
+function srsUpdate(sid,ok){
+  const today=stripTime(new Date()).getTime();
+  let s=S.srs[sid]||{reps:0,interval:0,ease:2.5,due:0,lapses:0,seen:0};
+  s.seen=(s.seen||0)+1;
+  if(ok){
+    if(s.reps<=0)s.interval=1; else if(s.reps===1)s.interval=3; else s.interval=Math.min(120,Math.round(s.interval*s.ease));
+    s.reps++; s.ease=Math.min(2.8,(s.ease||2.5)+0.02);
+  }else{
+    s.reps=0; s.interval=1; s.lapses=(s.lapses||0)+1; s.ease=Math.max(1.3,(s.ease||2.5)-0.2);
+  }
+  s.due=today+s.interval*86400000;
+  S.srs[sid]=s;
+}
+function srsRecord(it,ok,your){
+  const sid=srsIdFor(it); if(!sid)return;
+  const gid=it.mod||LSN.id;
+  srsUpdate(sid,ok);
+  if(ok)resolveMistakeSid(sid); else addMistake(it,gid,your,sid);
+}
+function dueSids(){const now=stripTime(new Date()).getTime();return Object.keys(S.srs).filter(k=>(S.srs[k].due||0)<=now);}
+function dueCount(){return dueSids().length;}
+/* Tüm modüllerdeki soruları sid'leriyle indeksle (tekrar kuyruğunu yeniden kurmak için) */
+function reviewIndex(){
+  const arr=[],seen={};
+  GRAMMAR.forEach(g=>{const id=g.id,det=GDET[id]||{},plus=GRAMMAR_PLUS[id]||{};
+    (det.mini||g.quiz||[]).concat(det.test||plus.test||[]).forEach(q=>{const sid=id+'|mc|'+srsHash(q.q);if(!seen[sid]){seen[sid]=1;arr.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex,mod:id,_sid:sid});}});
+    lessonSents(id).filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;}).forEach(s=>{const sid=id+'|bd|'+srsHash(s.en);if(!seen[sid]){seen[sid]=1;arr.push({type:'build',tr:s.tr,answer:s.en,mod:id,_sid:sid});}});
+  });
+  return arr;
+}
+function buildDueLesson(){const due={};dueSids().forEach(k=>due[k]=1);return reviewIndex().filter(x=>due[x._sid]);}
+function startDueReview(){
+  const due=buildDueLesson();
+  if(!due.length){ if(GRAMMAR.some(g=>S.gram[g.id])){startReview();return;} alert('Henüz tekrar zamanı gelen soru yok. Önce birkaç ders çöz — sonra aralıklı tekrar burada birikir!'); return; }
+  const items=[{type:'tip',title:'Günün Tekrarı 🔁',html:'Bugün hatırlama zamanı gelen <b>'+due.length+' soru</b>. Aralıklı tekrar: tam unutmadan tazele — kalıcılığın sırrı tam olarak bu! 💪'}];
+  shuffle(due).slice(0,20).forEach(x=>items.push(x));
+  LSN={id:'__due__',review:true,items:items,i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
+  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
+}
+/* Hata defteri */
+function activeMistakes(){return (S.mistakes||[]).filter(m=>!m.resolved);}
+function addMistake(it,gid,your,sid){
+  S.mistakes=S.mistakes||[]; if(!sid)return;
+  let m=S.mistakes.find(x=>x.sid===sid);
+  const base={sid:sid,mod:gid,type:it.type,ts:Date.now(),resolved:false};
+  if(it.type==='mc'){base.q=it.q;base.opts=it.opts;base.a=it.a;base.ex=it.ex;base.your=(your==null?null:your);}
+  else{base.tr=it.tr;base.answer=it.answer;base.q='Cümleyi kur: '+it.tr;}
+  if(m){const c=(m.count||1)+1;Object.assign(m,base,{count:c});}
+  else{base.count=1;S.mistakes.push(base);}
+}
+function resolveMistakeSid(sid){const m=(S.mistakes||[]).find(x=>x.sid===sid&&!x.resolved);if(m)m.resolved=true;}
+function clearMistakes(){if(confirm('Hata defteri tamamen temizlensin mi?')){S.mistakes=[];save();renderGrammar();}}
+function buildMistakeLesson(){
+  const ms=shuffle(activeMistakes().slice());
+  const items=[{type:'tip',title:'Hata Defteri 🔧',html:'Daha önce yanlış yaptığın <b>'+ms.length+' soru</b>. Doğru çözersen defterinden silinir — zayıf noktalarını kapat!'}];
+  ms.slice(0,20).forEach(m=>{ if(m.type==='mc')items.push({type:'mc',q:m.q,opts:m.opts,a:m.a,ex:m.ex,mod:m.mod}); else items.push({type:'build',tr:m.tr,answer:m.answer,mod:m.mod}); });
+  return items;
+}
+function startMistakeReview(){
+  if(!activeMistakes().length){alert('Hata defterin boş — harika! 🎉');return;}
+  LSN={id:'__mistakes__',review:true,items:buildMistakeLesson(),i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
+  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
+}
 
 /* ===== Duolingo tarzı ders motoru ===== */
 let LSN={};
@@ -2647,11 +2737,13 @@ function lCheck(){
   if(it.type==='mc'){
     if(LSN.sel==null)return;LSN.answered=true;LSN.total++;
     const ok=LSN.sel===it.a;
+    srsRecord(it,ok,LSN.sel);
     document.querySelectorAll('#lchoices .lchoice').forEach((b,k)=>{b.classList.add('disabled');if(k===it.a)b.classList.add('correct');if(k===LSN.sel&&!ok)b.classList.add('wrong');});
     lResult(ok,it.ex);
   }else if(it.type==='build'||it.type==='listen'){
     LSN.answered=true;LSN.total++;
     const ok=normalize(LSN.built.map(b=>b.w).join(' '))===normalize(it.answer);
+    srsRecord(it,ok,null);
     document.querySelectorAll('#bBank .chip').forEach(c=>c.classList.add('used'));
     lResult(ok,'Doğru cümle: '+it.answer);
   }
