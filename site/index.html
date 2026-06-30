@@ -2472,11 +2472,28 @@ function learnFinishKnown(){L.objs.forEach(w=>{S.known[wKey(curTopic,w.en)]=true
 /* ============================== GRAMER ============================== */
 function lvlClass(l){return l.indexOf("B2")>=0?"B2":l.indexOf("B1")>=0?"B1":"A2";}
 function strip(s){return String(s).replace(/<[^>]+>/g,"");}
+/* ===== Faz 3: ustalık seviyesi (SRS gücünden) ===== */
+function moduleMastery(id){
+  const g=GRAMMAR.find(x=>x.id===id);if(!g)return {level:0,frac:0};
+  const det=GDET[id]||{},plus=GRAMMAR_PLUS[id]||{};
+  const mcs=(det.mini||g.quiz||[]).concat(det.test||plus.test||[]);
+  let total=0,seen=0,strong=0;
+  mcs.forEach(q=>{const sid=id+'|mc|'+srsHash(q.q);total++;const s=S.srs[sid];if(s){seen++;if((s.reps||0)>=2)strong++;}});
+  const frac=total?strong/total:0;
+  let level=0;
+  if(seen>0||(S.lessonBest&&S.lessonBest[id]!=null))level=1;
+  if(frac>=0.35||(S.gram[id]&&frac>=0.15))level=Math.max(level,2);
+  if(frac>=0.7)level=3;
+  return {level:level,frac:frac,seen:seen,total:total,strong:strong};
+}
+function masteryBadge(l){return l>=3?'🥇':l>=2?'🥈':l>=1?'🥉':'';}
+function masteryName(l){return l>=3?'Altın · ustalaştın':l>=2?'Gümüş · sağlamlaşıyor':l>=1?'Bronz · başladın':'';}
+function masteryCounts(){const c=[0,0,0,0];GRAMMAR.forEach(g=>c[moduleMastery(g.id).level]++);return c;}
 function renderGrammar(){
   const el=document.getElementById("grammar");
   const done=GRAMMAR.filter(g=>S.gram[g.id]).length;
   const st=S.streak||{n:0};
-  const due=dueCount();const mist=activeMistakes().length;
+  const due=dueCount();const mist=activeMistakes().length;const mc=masteryCounts();
   let html=`<div class="card">
     <div class="eyebrow">Gramer · İnteraktif Dersler <span class="ai-badge">oyunlaştırılmış</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
@@ -2484,6 +2501,8 @@ function renderGrammar(){
       <div style="display:flex;gap:14px"><span class="xp-chip">⭐ ${S.xp||0} XP</span><span class="xp-chip" style="color:var(--red)">🔥 ${st.n||0} gün</span></div>
     </div>
     <div class="bar green" style="margin-top:8px"><i style="width:${Math.round(done/GRAMMAR.length*100)}%"></i></div>
+    <div style="display:flex;gap:14px;margin-top:8px;font-size:13px;font-weight:700"><span>🥇 ${mc[3]} altın</span><span>🥈 ${mc[2]} gümüş</span><span>🥉 ${mc[1]} bronz</span></div>
+    <p class="muted" style="margin:4px 0 0;font-size:12px">Ustalık, sınavı geçmenle değil <b>aralıklı tekrarda tekrar tekrar doğru yapmanla</b> yükselir.</p>
     <p class="muted" style="margin:10px 0 0;font-size:13px">Her ders kademeli: <b>tanı → boşluk doldur → cümle kur → dönüştür → hata bul → kendi cümleni yaz</b> (AI kontrol eder). Sınav formatlarını (Cloze, Closest Meaning) birebir çalışırsın. <b>Aralıklı tekrar</b> ile çözdüğün sorular tam unutmadan önce yeniden gelir.</p>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
       <button class="btn green" style="width:100%" onclick="startDueReview()">⏰ Günün Tekrarı${due?' · '+due+' soru hazır':''}</button>
@@ -2505,11 +2524,13 @@ function renderGrammar(){
   }
   html+=GRAMMAR.map(g=>{
     const dn=S.gram[g.id];const best=S.lessonBest&&S.lessonBest[g.id];
-    return `<div class="skill ${dn?'done':''}" onclick="startGrammarLesson('${g.id}')">
-      <div class="ring">${dn?'✓':g.id.replace('G','')}</div>
+    const m=moduleMastery(g.id);const badge=masteryBadge(m.level);
+    const sub=m.level>=1?(masteryName(m.level)+' · %'+Math.round(m.frac*100)+' akılda'+(best!=null?' · en iyi %'+best:'')):'İnteraktif ders · tanı → üret → yaz';
+    return `<div class="skill ${m.level>=2?'done':''}" onclick="startGrammarLesson('${g.id}')">
+      <div class="ring">${badge||g.id.replace('G','')}</div>
       <div class="si"><div class="st">${esc(g.title)} <span class="lvl ${lvlClass(g.lvl)}">${g.lvl}</span></div>
-        <div class="sd">${dn?('Tamamlandı'+(best!=null?' · en iyi %'+best:'')):'İnteraktif ders · tekrarlı (~18 soru)'}</div></div>
-      <button class="go" onclick="event.stopPropagation();startGrammarLesson('${g.id}')">${dn?'Tekrar':'Başla'}</button>
+        <div class="sd">${sub}</div></div>
+      <button class="go" onclick="event.stopPropagation();startGrammarLesson('${g.id}')">${m.level>=1?'Tekrar':'Başla'}</button>
     </div>`;
   }).join("");
   el.innerHTML=html;
@@ -2682,7 +2703,13 @@ function lessonSents(id){
 }
 function buildLesson(id){
   const g=GRAMMAR.find(x=>x.id===id);const det=GDET[id]||{};const plus=GRAMMAR_PLUS[id]||{};const p2=GPLUS2[id]||{};
-  const items=[{type:'tip',title:g.title,html:((det.lesson||[]).slice(0,3).map(s=>'<b>'+s.h+'</b><br>'+s.p).join('<br><br>')||g.summary)+'<br><br>⚠️ '+g.mistake}];
+  const items=[];
+  // 0) TÜMEVARIM: kuraldan ÖNCE örnekleri gör, kalıbı kendin fark et
+  const exPool=[];(det.lesson||[]).forEach(s=>(s.ex||[]).forEach(e=>exPool.push(e)));
+  const noticeEx=(exPool.length?exPool:(GBANK[id]||[])).slice(0,3);
+  if(noticeEx.length>=2)items.push({type:'notice',title:g.title,ex:noticeEx,q:'Aşağıdaki örnekleri oku — ortak kalıbı/kuralı fark edebiliyor musun? 🤔'});
+  // 1) KURAL
+  items.push({type:'tip',title:g.title,html:((det.lesson||[]).slice(0,3).map(s=>'<b>'+s.h+'</b><br>'+s.p).join('<br><br>')||g.summary)+'<br><br>⚠️ '+g.mistake});
   const sents=lessonSents(id);
   const mcPool=shuffle((det.mini||g.quiz||[]).concat(det.test||plus.test||[]));
   // 1) TANIMA (kolay): çoktan seçmeli + eşleştirme
@@ -2742,7 +2769,12 @@ function renderLesson(){
   const n=LSN.items.length;
   const head=`<div class="lesson-top"><button class="x" onclick="quitLesson()">✕</button><div class="lprog"><i style="width:${Math.round(LSN.i/n*100)}%"></i></div><div class="hearts">${heartsHTML()}</div></div>`;
   let body='',foot='';
-  if(it.type==='tip'){
+  if(it.type==='notice'){
+    body=`<div class="lesson-q"><div style="font-weight:700;color:var(--green);font-size:13px;letter-spacing:1px">🔎 ÖNCE FARK ET</div><h2 style="font-size:19px">${esc(it.q)}</h2>
+      <div style="margin-top:6px">${it.ex.map(e=>`<div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0"><div style="font-size:16px">${e.en}</div><div class="muted" style="font-size:13px;margin-top:2px">${esc(e.tr)}</div></div>`).join('')}</div>
+      <p class="muted" style="font-size:12.5px;margin-top:4px">Kalıbı tahmin et, sonra kuralla karşılaştır — böylece daha kalıcı öğrenirsin.</p></div>`;
+    foot=`<button class="bigbtn green" onclick="lessonNext()">Kuralı göster →</button>`;
+  }else if(it.type==='tip'){
     body=`<div class="lesson-q"><div style="font-weight:700;color:var(--amber);font-size:13px;letter-spacing:1px">💡 KURAL</div><h2>${esc(it.title)}</h2><div class="lprompt" style="font-size:15px;line-height:1.75">${it.html}</div></div>`;
     foot=`<button class="bigbtn green" onclick="lessonNext()">${LSN.i===0?'Başla →':'Devam →'}</button>`;
   }else if(it.type==='mc'){
