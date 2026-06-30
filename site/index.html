@@ -283,6 +283,15 @@
   .lchoice.correct{border-color:var(--green);background:var(--green-soft)}
   .lchoice.wrong{border-color:var(--red);background:var(--red-soft)}
   .lchoice.disabled{pointer-events:none}
+  .gapin{width:100%;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 16px;font-size:18px;font-family:inherit;outline:none;box-shadow:0 2px 0 var(--line)}
+  .gapin:focus{border-color:var(--amber)}
+  .writein{width:100%;min-height:80px;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;font-size:16px;font-family:inherit;outline:none;resize:vertical;box-shadow:0 2px 0 var(--line)}
+  .writein:focus{border-color:var(--amber)}
+  .spotw{display:inline-block;border:2px solid transparent;border-radius:9px;padding:2px 6px;margin:2px 1px;cursor:pointer}
+  .spotw:hover{background:var(--amber-soft)}
+  .spotw.sel{border-color:var(--amber);background:var(--amber-soft)}
+  .spotw.correct{border-color:var(--green);background:var(--green-soft)}
+  .spotw.wrong{border-color:var(--red);background:var(--red-soft)}
   .build-answer{min-height:52px;border-bottom:2px dashed var(--line);display:flex;flex-wrap:wrap;gap:8px;padding:8px 0 14px;margin-bottom:18px;align-content:flex-start}
   .build-bank{display:flex;flex-wrap:wrap;gap:8px}
   .chip{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 13px;font-size:16px;cursor:pointer;box-shadow:0 2px 0 var(--line);user-select:none}
@@ -1524,7 +1533,7 @@ const GDET={
 /* ============================== DURUM / KAYIT ============================== */
 const KEY="epe_state_v1";
 let S=load();
-function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false}}}
+function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[]}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[]}}}
 function save(){S._updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(S));schedulePush();}
 
 /* ============================== BULUT SENKRON (Supabase + e-posta/şifre girişi) ============================== */
@@ -2041,7 +2050,7 @@ function renderDash(){
 
   <div class="card">
     <div class="eyebrow">Bugünün görevleri</div>
-    ${renderTodayTasks(wi)}
+    ${reviewNudge()}${renderTodayTasks(wi)}
   </div>
 
   <div class="card" style="background:var(--ink);color:#fff;border:none">
@@ -2051,6 +2060,7 @@ function renderDash(){
   </div>`;
   renderCoachChat();renderCoachMem();
 }
+function reviewNudge(){const d=dueCount();if(!d)return '';return `<div onclick="switchTo('grammar')" style="cursor:pointer;background:var(--amber-soft);border:1px solid var(--amber);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:13px;font-weight:600">⏰ Gramerde ${d} soru tekrar zamanı geldi — dokun, "Günün Tekrarı"nı çöz.</div>`;}
 function renderTodayTasks(wi){
   if(S.flexMode){
     const blocks=flexTodayBlocks();
@@ -2466,6 +2476,7 @@ function renderGrammar(){
   const el=document.getElementById("grammar");
   const done=GRAMMAR.filter(g=>S.gram[g.id]).length;
   const st=S.streak||{n:0};
+  const due=dueCount();const mist=activeMistakes().length;
   let html=`<div class="card">
     <div class="eyebrow">Gramer · İnteraktif Dersler <span class="ai-badge">oyunlaştırılmış</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
@@ -2473,9 +2484,25 @@ function renderGrammar(){
       <div style="display:flex;gap:14px"><span class="xp-chip">⭐ ${S.xp||0} XP</span><span class="xp-chip" style="color:var(--red)">🔥 ${st.n||0} gün</span></div>
     </div>
     <div class="bar green" style="margin-top:8px"><i style="width:${Math.round(done/GRAMMAR.length*100)}%"></i></div>
-    <p class="muted" style="margin:10px 0 0;font-size:13px">Her modül Duolingo tarzı bir ders: <b>kuralı gör → çöz → eşleştir</b>. <b>Kalıcılık için tekrar:</b> her konu ders boyunca birden çok kez gelir, <b>yanlış yaptığın soru ders bitmeden tekrar sorulur</b>, sonda da hızlı tekrar turu var.</p>
-    <button class="btn amber" style="margin-top:12px;width:100%" onclick="startReview()">🔁 Karışık Tekrar — bitmiş konuları karıştır</button>
+    <p class="muted" style="margin:10px 0 0;font-size:13px">Her ders kademeli: <b>tanı → boşluk doldur → cümle kur → dönüştür → hata bul → kendi cümleni yaz</b> (AI kontrol eder). Sınav formatlarını (Cloze, Closest Meaning) birebir çalışırsın. <b>Aralıklı tekrar</b> ile çözdüğün sorular tam unutmadan önce yeniden gelir.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+      <button class="btn green" style="width:100%" onclick="startDueReview()">⏰ Günün Tekrarı${due?' · '+due+' soru hazır':''}</button>
+      <button class="btn amber" style="width:100%" onclick="startReview()">🔁 Karışık Tekrar — bitmiş konuları karıştır</button>
+    </div>
   </div>`;
+  if(mist){
+    html+=`<div class="card" style="border-color:var(--red)">
+      <div class="eyebrow" style="color:var(--red)">🔧 Hata Defteri · ${mist} soru</div>
+      <p class="muted" style="font-size:13px;margin:.2em 0 10px">Yanlış yaptığın sorular burada birikir; doğru çözünce otomatik silinir. Sınav öncesi en değerli tekrar kaynağın.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn dark" onclick="startMistakeReview()">Yanlışlarımı çöz</button>
+        <button class="btn ghost" onclick="clearMistakes()">Temizle</button>
+      </div>
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px;color:var(--amber);font-weight:700">Listeyi gör</summary>
+        <div style="margin-top:8px">${activeMistakes().slice(0,40).map(m=>`<div style="padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px"><b>H${String(m.mod||'').replace('G','')}</b> · ${esc(m.q||('Cümle: '+(m.tr||'')))}${m.count>1?' <span class="muted">×'+m.count+'</span>':''}</div>`).join('')}</div>
+      </details>
+    </div>`;
+  }
   html+=GRAMMAR.map(g=>{
     const dn=S.gram[g.id];const best=S.lessonBest&&S.lessonBest[g.id];
     return `<div class="skill ${dn?'done':''}" onclick="startGrammarLesson('${g.id}')">
@@ -2508,6 +2535,141 @@ const GBANK={
  G16:[{en:"I don't know whether he will come.",tr:"Gelecek mi bilmiyorum."},{en:"What he said was true.",tr:"Söylediği doğruydu."},{en:"Tell me what you want.",tr:"Ne istediğini söyle."},{en:"The man standing there is my uncle.",tr:"Orada duran adam amcam."},{en:"The car parked outside is mine.",tr:"Dışarıdaki araba benim."},{en:"I am not sure if it's correct.",tr:"Doğru mu emin değilim."},{en:"I wonder why she left.",tr:"Neden gittiğini merak ediyorum."},{en:"The woman wearing red is a doctor.",tr:"Kırmızı giyen kadın doktor."},{en:"Do you know where he lives?",tr:"Nerede yaşadığını biliyor musun?"},{en:"What surprised me was his answer.",tr:"Beni şaşırtan cevabıydı."}]
 };
 
+/* ===== Faz 2: sınav-tipi alıştırma bankası (dönüştürme + hata bulma) ===== */
+const GPLUS2={
+ G05:{transform:[
+   {from:"You are not allowed to smoke here.",to:"You mustn't smoke here.",hint:"yasak → mustn't"},
+   {from:"It is not necessary for you to pay.",to:"You don't have to pay.",hint:"gerek yok → don't have to"},
+   {from:"I am sure he is at home.",to:"He must be at home.",hint:"mantıksal kesinlik → must"}],
+  spot:[
+   {bad:"You had better to see a doctor.",wrong:"to",fix:"(sil): had better see",hint:"had better + yalın fiil"},
+   {bad:"She must to finish it today.",wrong:"to",fix:"must finish",hint:"must + yalın fiil"}]},
+ G11:{transform:[
+   {from:"Someone stole my bike.",to:"My bike was stolen.",hint:"edilgen: be + V3"},
+   {from:"People speak English here.",to:"English is spoken here.",hint:"edilgen geniş zaman"},
+   {from:"They have finished the work.",to:"The work has been finished.",hint:"edilgen perfect: has been + V3"}],
+  spot:[
+   {bad:"The bridge was build in 1990.",wrong:"build",fix:"built",hint:"be + V3 (built)"},
+   {bad:"English is speak all over the world.",wrong:"speak",fix:"spoken",hint:"be + V3 (spoken)"}]},
+ G12:{transform:[
+   {from:"Study, or you will fail.",to:"Unless you study, you will fail.",hint:"unless = if not"},
+   {from:"I'm not rich, so I won't buy it.",to:"If I were rich, I would buy it.",hint:"Type 2: if + past, would V"},
+   {from:"She didn't study, so she failed.",to:"If she had studied, she would have passed.",hint:"Type 3: if + had V3, would have V3"}],
+  spot:[
+   {bad:"If I will see her, I will tell her.",wrong:"will",fix:"see (if + present)",hint:"if-cümlesinde will olmaz"},
+   {bad:"If I was you, I would wait.",wrong:"was",fix:"were",hint:"Type 2: if I were you"}]},
+ G13:{transform:[
+   {from:'"I am tired," he said.',to:"He said he was tired.",hint:"backshift: am → was"},
+   {from:'"I will call you," she said.',to:"She said she would call me.",hint:"will → would"},
+   {from:'"Where do you live?" he asked.',to:"He asked where I lived.",hint:"soru → düz cümle sırası"}],
+  spot:[
+   {bad:"He said me that he was late.",wrong:"said",fix:"told",hint:"tell + nesne / say (nesnesiz)"},
+   {bad:"She told that she was busy.",wrong:"told",fix:"said",hint:"told me / said that"}]},
+ G14:{transform:[
+   {from:"A mechanic repaired my car.",to:"I had my car repaired.",hint:"have + nesne + V3"},
+   {from:"A hairdresser cut her hair.",to:"She had her hair cut.",hint:"have + nesne + V3"}],
+  spot:[
+   {bad:"She made him to apologize.",wrong:"to",fix:"made him apologize",hint:"make + obje + yalın fiil"},
+   {bad:"I got my brother help me.",wrong:"help",fix:"to help",hint:"get sb TO do"}]},
+ G15:{transform:[
+   {from:"It was cold. We went out.",to:"Although it was cold, we went out.",hint:"although + cümle"},
+   {from:"It was raining. We continued.",to:"Despite the rain, we continued.",hint:"despite + isim"}],
+  spot:[
+   {bad:"Despite it was cold, we went out.",wrong:"Despite",fix:"Although",hint:"despite + isim; although + cümle"},
+   {bad:"Although the rain, we went out.",wrong:"Although",fix:"Despite",hint:"although + cümle; despite + isim"}]}
+};
+function makeSpot(sp){const words=sp.bad.split(/\s+/);const norm=w=>w.replace(/[^A-Za-z']/g,'').toLowerCase();let idx=words.findIndex(w=>norm(w)===norm(sp.wrong));if(idx<0)idx=0;return {type:'spot',bad:sp.bad,words:words,badIdx:idx,wrong:sp.wrong,fix:sp.fix,hint:sp.hint};}
+function gapFromMC(q){if(!/_{2,}/.test(q.q))return null;const ans=q.opts[q.a];if(!ans||ans.length>16)return null;return {type:'gap',q:q.q,answer:ans,ex:q.ex,alts:[]};}
+
+/* ============================== ARALIKLI TEKRAR (SRS) + HATA DEFTERİ ============================== */
+function srsHash(s){let h=5381;s=String(s);for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return (h>>>0).toString(36);}
+function srsIdFor(it){const gid=it.mod||LSN.id;if(!gid||gid.indexOf('__')===0)return it.mod?srsIdRaw(it,it.mod):null;return srsIdRaw(it,gid);}
+function srsIdRaw(it,gid){
+  if(it.type==='mc')return gid+'|mc|'+srsHash(it.q);
+  if(it.type==='gap')return gid+'|gp|'+srsHash(it.q);
+  if(it.type==='transform')return gid+'|tf|'+srsHash(it.answer);
+  if(it.type==='spot')return gid+'|sp|'+srsHash(it.bad);
+  if(it.type==='build'||it.type==='listen')return gid+'|bd|'+srsHash(it.answer);
+  return null;
+}
+function srsUpdate(sid,ok){
+  const today=stripTime(new Date()).getTime();
+  let s=S.srs[sid]||{reps:0,interval:0,ease:2.5,due:0,lapses:0,seen:0};
+  s.seen=(s.seen||0)+1;
+  if(ok){
+    if(s.reps<=0)s.interval=1; else if(s.reps===1)s.interval=3; else s.interval=Math.min(120,Math.round(s.interval*s.ease));
+    s.reps++; s.ease=Math.min(2.8,(s.ease||2.5)+0.02);
+  }else{
+    s.reps=0; s.interval=1; s.lapses=(s.lapses||0)+1; s.ease=Math.max(1.3,(s.ease||2.5)-0.2);
+  }
+  s.due=today+s.interval*86400000;
+  S.srs[sid]=s;
+}
+function srsRecord(it,ok,your){
+  const sid=srsIdFor(it); if(!sid)return;
+  const gid=it.mod||LSN.id;
+  srsUpdate(sid,ok);
+  if(ok)resolveMistakeSid(sid); else addMistake(it,gid,your,sid);
+}
+function dueSids(){const now=stripTime(new Date()).getTime();return Object.keys(S.srs).filter(k=>(S.srs[k].due||0)<=now);}
+function dueCount(){return dueSids().length;}
+/* Tüm modüllerdeki soruları sid'leriyle indeksle (tekrar kuyruğunu yeniden kurmak için) */
+function reviewIndex(){
+  const arr=[],seen={};
+  GRAMMAR.forEach(g=>{const id=g.id,det=GDET[id]||{},plus=GRAMMAR_PLUS[id]||{},p2=GPLUS2[id]||{};
+    const mcs=(det.mini||g.quiz||[]).concat(det.test||plus.test||[]);
+    mcs.forEach(q=>{const sid=id+'|mc|'+srsHash(q.q);if(!seen[sid]){seen[sid]=1;arr.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex,mod:id,_sid:sid});}});
+    mcs.forEach(q=>{const ga=gapFromMC(q);if(ga){const sid=id+'|gp|'+srsHash(q.q);if(!seen[sid]){seen[sid]=1;arr.push(Object.assign({mod:id,_sid:sid},ga));}}});
+    lessonSents(id).filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;}).forEach(s=>{const sid=id+'|bd|'+srsHash(s.en);if(!seen[sid]){seen[sid]=1;arr.push({type:'build',tr:s.tr,answer:s.en,mod:id,_sid:sid});}});
+    (p2.transform||[]).forEach(t=>{const sid=id+'|tf|'+srsHash(t.to);if(!seen[sid]){seen[sid]=1;arr.push({type:'transform',from:t.from,answer:t.to,hint:t.hint,mod:id,_sid:sid});}});
+    (p2.spot||[]).forEach(sp=>{const sid=id+'|sp|'+srsHash(sp.bad);if(!seen[sid]){seen[sid]=1;arr.push(Object.assign({mod:id,_sid:sid},makeSpot(sp)));}});
+  });
+  return arr;
+}
+function buildDueLesson(){const due={};dueSids().forEach(k=>due[k]=1);return reviewIndex().filter(x=>due[x._sid]);}
+function startDueReview(){
+  const due=buildDueLesson();
+  if(!due.length){ if(GRAMMAR.some(g=>S.gram[g.id])){startReview();return;} alert('Henüz tekrar zamanı gelen soru yok. Önce birkaç ders çöz — sonra aralıklı tekrar burada birikir!'); return; }
+  const items=[{type:'tip',title:'Günün Tekrarı 🔁',html:'Bugün hatırlama zamanı gelen <b>'+due.length+' soru</b>. Aralıklı tekrar: tam unutmadan tazele — kalıcılığın sırrı tam olarak bu! 💪'}];
+  shuffle(due).slice(0,20).forEach(x=>items.push(x));
+  LSN={id:'__due__',review:true,items:items,i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
+  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
+}
+/* Hata defteri */
+function activeMistakes(){return (S.mistakes||[]).filter(m=>!m.resolved);}
+function mistakeSnap(it,your){
+  const s={type:it.type};
+  if(it.type==='mc'){s.q=it.q;s.opts=it.opts;s.a=it.a;s.ex=it.ex;s.your=(your==null?null:your);}
+  else if(it.type==='build'||it.type==='listen'){s.type='build';s.tr=it.tr;s.answer=it.answer;s.q='Cümleyi kur: '+it.tr;}
+  else if(it.type==='gap'){s.q=it.q;s.answer=it.answer;s.alts=it.alts||[];s.ex=it.ex;}
+  else if(it.type==='transform'){s.from=it.from;s.answer=it.answer;s.hint=it.hint;s.q='Dönüştür: '+it.from;}
+  else if(it.type==='spot'){s.bad=it.bad;s.words=it.words;s.badIdx=it.badIdx;s.wrong=it.wrong;s.fix=it.fix;s.hint=it.hint;s.q='Hatayı bul: '+it.bad;}
+  return s;
+}
+function addMistake(it,gid,your,sid){
+  S.mistakes=S.mistakes||[]; if(!sid)return;
+  const snap=mistakeSnap(it,your);
+  let m=S.mistakes.find(x=>x.sid===sid);
+  if(m){m.count=(m.count||1)+1;m.ts=Date.now();m.resolved=false;m.mod=gid;m.item=snap;m.q=snap.q;}
+  else S.mistakes.push({sid:sid,mod:gid,ts:Date.now(),resolved:false,count:1,item:snap,q:snap.q});
+}
+function resolveMistakeSid(sid){const m=(S.mistakes||[]).find(x=>x.sid===sid&&!x.resolved);if(m)m.resolved=true;}
+function clearMistakes(){if(confirm('Hata defteri tamamen temizlensin mi?')){S.mistakes=[];save();renderGrammar();}}
+function buildMistakeLesson(){
+  const ms=shuffle(activeMistakes().slice());
+  const items=[{type:'tip',title:'Hata Defteri 🔧',html:'Daha önce yanlış yaptığın <b>'+ms.length+' soru</b>. Doğru çözersen defterinden silinir — zayıf noktalarını kapat!'}];
+  ms.slice(0,20).forEach(m=>{
+    const base=m.item?Object.assign({},m.item):(m.type==='mc'?{type:'mc',q:m.q,opts:m.opts,a:m.a,ex:m.ex}:{type:'build',tr:m.tr,answer:m.answer});
+    base.mod=m.mod;items.push(base);
+  });
+  return items;
+}
+function startMistakeReview(){
+  if(!activeMistakes().length){alert('Hata defterin boş — harika! 🎉');return;}
+  LSN={id:'__mistakes__',review:true,items:buildMistakeLesson(),i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
+  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
+}
+
 /* ===== Duolingo tarzı ders motoru ===== */
 let LSN={};
 function lessonSents(id){
@@ -2519,22 +2681,32 @@ function lessonSents(id){
   return sents;
 }
 function buildLesson(id){
-  const g=GRAMMAR.find(x=>x.id===id);const det=GDET[id]||{};const plus=GRAMMAR_PLUS[id]||{};
+  const g=GRAMMAR.find(x=>x.id===id);const det=GDET[id]||{};const plus=GRAMMAR_PLUS[id]||{};const p2=GPLUS2[id]||{};
   const items=[{type:'tip',title:g.title,html:((det.lesson||[]).slice(0,3).map(s=>'<b>'+s.h+'</b><br>'+s.p).join('<br><br>')||g.summary)+'<br><br>⚠️ '+g.mistake}];
   const sents=lessonSents(id);
-  const core=[];
-  // çoktan seçmeli (mini + test) — daha fazla soru = daha çok tekrar
-  shuffle((det.mini||g.quiz||[]).concat(det.test||plus.test||[])).slice(0,10).forEach(q=>core.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex}));
-  // cümle kurma
-  shuffle(sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;})).slice(0,4).forEach(s=>core.push({type:'build',tr:s.tr,answer:s.en}));
-  // dinleme: sesi duy → cümleyi kur (telaffuz + dinleme pratiği)
-  shuffle(sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=8;})).slice(0,2).forEach(s=>core.push({type:'listen',tr:s.tr,answer:s.en}));
-  // eşleştirme
+  const mcPool=shuffle((det.mini||g.quiz||[]).concat(det.test||plus.test||[]));
+  // 1) TANIMA (kolay): çoktan seçmeli + eşleştirme
+  const easy=[];
+  mcPool.slice(0,8).forEach(q=>easy.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex}));
   const matchable=shuffle(sents.filter(s=>s.en.split(/\s+/).length<=6)).slice(0,4);
-  if(matchable.length>=3)core.push({type:'match',pairs:matchable});
-  shuffle(core).forEach(x=>items.push(x));
-  // KALICILIK İÇİN DERS SONU TEKRARI: aynı yapıları yeniden sor
-  const recap=shuffle(core.filter(x=>x.type==='mc')).slice(0,4).map(x=>Object.assign({},x));
+  if(matchable.length>=3)easy.push({type:'match',pairs:matchable});
+  // 2) HATIRLAMA (orta): boşluğa kelimeyi YAZ (Cloze pratiği)
+  const mid=[];
+  shuffle(mcPool.filter(q=>/_{2,}/.test(q.q))).slice(0,2).forEach(q=>{const ga=gapFromMC(q);if(ga)mid.push(ga);});
+  // 3) ÜRETİM (zor): cümle kurma + dinleme + dönüştürme (Closest Meaning) + hata bulma
+  const hard=[];
+  shuffle(sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;})).slice(0,3).forEach(s=>hard.push({type:'build',tr:s.tr,answer:s.en}));
+  shuffle(sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=8;})).slice(0,2).forEach(s=>hard.push({type:'listen',tr:s.tr,answer:s.en}));
+  shuffle((p2.transform||[]).slice()).slice(0,2).forEach(t=>hard.push({type:'transform',from:t.from,answer:t.to,hint:t.hint}));
+  shuffle((p2.spot||[]).slice()).slice(0,2).forEach(sp=>hard.push(makeSpot(sp)));
+  // sırayı kademeli kur: kolay → orta → zor
+  shuffle(easy).forEach(x=>items.push(x));
+  shuffle(mid).forEach(x=>items.push(x));
+  shuffle(hard).forEach(x=>items.push(x));
+  // 4) ÜRETİM ZİRVESİ: kendi cümleni yaz → AI kontrol etsin (anahtar varsa)
+  if(hasKey())items.push({type:'write',prompt:'“'+g.title+'” kuralını kullanarak kendi İngilizce cümleni yaz.',rule:g.title+' — '+strip(g.summary)});
+  // 5) KALICILIK İÇİN HIZLI TEKRAR
+  const recap=shuffle(easy.filter(x=>x.type==='mc')).slice(0,3).map(x=>Object.assign({},x));
   if(recap.length){items.push({type:'tip',title:g.title+' — Hızlı Tekrar 🔁',html:'Az önce öğrendiklerini pekiştirelim. Aynı yapılar tekrar geliyor — akılda kalsın diye! 💪'});recap.forEach(x=>items.push(x));}
   return items;
 }
@@ -2590,6 +2762,25 @@ function renderLesson(){
   }else if(it.type==='match'){
     body=`<div class="lesson-q"><div class="muted" style="font-weight:700;font-size:13px">EŞLEŞTİR — İNGİLİZCE ↔ TÜRKÇE</div><h2 style="font-size:18px">Doğru çiftlere dokun</h2><div class="lmatch" id="lmatch"></div></div>`;
     foot=`<div class="fb" id="fbBox"></div><button class="bigbtn gray" id="lbtn" disabled>Tümünü eşleştir</button>`;
+  }else if(it.type==='gap'){
+    body=`<div class="lesson-q"><div class="muted" style="font-weight:700;font-size:13px">BOŞLUĞA GELECEK KELİMEYİ YAZ</div><h2 style="font-size:20px">${esc(it.q)}</h2>
+      <input id="gapIn" class="gapin" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="cevabını yaz…" oninput="lGapInput()" onkeydown="if(event.key==='Enter'){var b=document.getElementById('lbtn');if(b&&!b.disabled)b.click();}"></div>`;
+    foot=lFooter("Kontrol et",true);
+  }else if(it.type==='transform'){
+    body=`<div class="lesson-q"><div class="muted" style="font-weight:700;font-size:13px">AYNI ANLAMA GELECEK ŞEKİLDE KUR</div><h2 style="font-size:17px">🔁 ${esc(it.from)}</h2>
+      <div class="build-answer" id="bAns"></div><div class="build-bank" id="bBank"></div>
+      ${it.hint?'<div class="ai-hint" style="margin-top:8px">İpucu: '+esc(it.hint)+'</div>':''}</div>`;
+    foot=lFooter("Kontrol et",true);
+  }else if(it.type==='spot'){
+    body=`<div class="lesson-q"><div class="muted" style="font-weight:700;font-size:13px">HATALI KELİMEYE DOKUN</div>
+      <h2 style="font-size:19px;line-height:1.7">${it.words.map((w,j)=>`<span class="spotw" id="sw${j}" onclick="lPickSpot(${j})">${esc(w)}</span>`).join(' ')}</h2>
+      ${it.hint?'<div class="ai-hint" style="margin-top:6px">İpucu: '+esc(it.hint)+'</div>':''}</div>`;
+    foot=lFooter("Kontrol et",true);
+  }else if(it.type==='write'){
+    body=`<div class="lesson-q"><div class="muted" style="font-weight:700;font-size:13px">✍️ KENDİ CÜMLENİ YAZ</div><h2 style="font-size:18px">${esc(it.prompt)}</h2>
+      <textarea id="writeIn" class="writein" placeholder="İngilizce cümleni buraya yaz…"></textarea>
+      <div id="writeOut" style="margin-top:8px"></div></div>`;
+    foot=`<div class="fb" id="fbBox"></div><button class="bigbtn green" id="lbtn" onclick="lWriteCheck()">AI'ya kontrol ettir</button>`;
   }
   const askBlock=`<div class="ask-wrap">
     <button class="ask-toggle" onclick="toggleAsk()">🤖 Takıldın mı? Yapay zekâya sor</button>
@@ -2603,9 +2794,28 @@ function renderLesson(){
       <div id="askOut" style="margin-top:8px"></div>`:aiOffBox()}
     </div></div>`;
   document.getElementById("lessonOverlay").innerHTML=`<div class="lesson-wrap">${head}${body}${askBlock}<div class="lfeed">${foot}</div></div>`;
-  if(it.type==='build'||it.type==='listen')renderBuild();
+  if(it.type==='build'||it.type==='listen'||it.type==='transform')renderBuild();
   if(it.type==='listen')setTimeout(function(){speak(it.answer);},250);
   if(it.type==='match')renderMatch();
+  if(it.type==='gap')setTimeout(function(){const g=document.getElementById('gapIn');if(g)g.focus();},100);
+}
+function lGapInput(){const v=(document.getElementById('gapIn')||{}).value||'';const btn=document.getElementById('lbtn');if(btn&&!LSN.answered){if(v.trim()){btn.className='bigbtn green';btn.disabled=false;}else{btn.className='bigbtn gray';btn.disabled=true;}}}
+function lPickSpot(j){if(LSN.answered)return;LSN.sel=j;document.querySelectorAll('.spotw').forEach((s,k)=>s.classList.toggle('sel',k===j));const btn=document.getElementById('lbtn');btn.className='bigbtn green';btn.disabled=false;}
+function gapMatch(v,it){const n=normalize(v);if(n===normalize(it.answer))return true;return (it.alts||[]).some(a=>normalize(a)===n);}
+async function lWriteCheck(){
+  const ta=document.getElementById('writeIn'),out=document.getElementById('writeOut'),btn=document.getElementById('lbtn');if(!ta)return;
+  if(LSN.answered){lessonNext();return;}
+  const text=(ta.value||'').trim();
+  if(!text){if(out)out.innerHTML='<div class="ai-hint">Önce bir cümle yaz 🙂</div>';return;}
+  const it=LSN.items[LSN.i];
+  LSN.answered=true;LSN.total++;LSN.correct++; // üretim: katılım puanı
+  if(!hasKey()){if(out)out.innerHTML='<div class="ai-hint">Cümleni kaydettik. (AI geri bildirimi için anahtar ekleyebilirsin.)</div>';btn.textContent='Devam →';btn.onclick=lessonNext;return;}
+  if(out)out.innerHTML='<div class="ai-hint"><span class="spin"></span>AI cümleni kontrol ediyor…</div>';
+  ta.disabled=true;
+  const prompt="Öğrenci '"+(it.rule||'')+"' gramer kuralını kullanarak şu İngilizce cümleyi yazdı:\n\""+text+"\"\n\nKısa Türkçe geri bildirim ver: Cümle bu kurala uygun ve doğru mu? Hata varsa düzeltilmiş hâlini yaz ve nedenini tek cümleyle açıkla. En sonda kalın olarak '✅ Doğru' veya '✏️ Düzeltildi' yaz.";
+  try{const r=await gemini(prompt,SYS_TUTOR);if(out)out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}
+  catch(e){if(out)out.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
+  btn.textContent='Devam →';btn.className='bigbtn green';btn.onclick=lessonNext;
 }
 function toggleAsk(){const p=document.getElementById('askPanel');if(p)p.style.display=(p.style.display==='none'?'block':'none');}
 function lessonAskContext(){
@@ -2614,6 +2824,10 @@ function lessonAskContext(){
   if(it.type==='mc')c+="Soru: "+it.q+" | Şıklar: "+it.opts.join(" / ")+" | Doğru cevap: "+it.opts[it.a]+" | Not: "+(it.ex||"");
   else if(it.type==='build'||it.type==='listen')c+="Öğrenci şu Türkçe cümlenin İngilizcesini kuruyor: '"+it.tr+"'. Doğru İngilizce: '"+it.answer+"'.";
   else if(it.type==='match')c+="Eşleştirme çiftleri: "+it.pairs.map(p=>p.en+" = "+p.tr).join("; ")+".";
+  else if(it.type==='gap')c+="Boşluk doldurma: '"+it.q+"'. Doğru cevap: '"+it.answer+"'. Not: "+(it.ex||"");
+  else if(it.type==='transform')c+="Öğrenci '"+it.from+"' cümlesini aynı anlama gelecek şekilde yeniden kuruyor. Doğru cevap: '"+it.answer+"'.";
+  else if(it.type==='spot')c+="Hatalı cümle: '"+it.bad+"'. Hatalı kelime: '"+it.wrong+"' → doğrusu: '"+it.fix+"'.";
+  else if(it.type==='write')c+="Öğrenci bu kuralla kendi cümlesini yazıyor: "+(it.rule||"")+".";
   else if(it.type==='tip')c+="Kural özeti: "+strip(it.html);
   return c;
 }
@@ -2647,13 +2861,34 @@ function lCheck(){
   if(it.type==='mc'){
     if(LSN.sel==null)return;LSN.answered=true;LSN.total++;
     const ok=LSN.sel===it.a;
+    srsRecord(it,ok,LSN.sel);
     document.querySelectorAll('#lchoices .lchoice').forEach((b,k)=>{b.classList.add('disabled');if(k===it.a)b.classList.add('correct');if(k===LSN.sel&&!ok)b.classList.add('wrong');});
     lResult(ok,it.ex);
   }else if(it.type==='build'||it.type==='listen'){
     LSN.answered=true;LSN.total++;
     const ok=normalize(LSN.built.map(b=>b.w).join(' '))===normalize(it.answer);
+    srsRecord(it,ok,null);
     document.querySelectorAll('#bBank .chip').forEach(c=>c.classList.add('used'));
     lResult(ok,'Doğru cümle: '+it.answer);
+  }else if(it.type==='transform'){
+    LSN.answered=true;LSN.total++;
+    const ok=normalize(LSN.built.map(b=>b.w).join(' '))===normalize(it.answer);
+    srsRecord(it,ok,null);
+    document.querySelectorAll('#bBank .chip').forEach(c=>c.classList.add('used'));
+    lResult(ok,'Doğru: '+it.answer);
+  }else if(it.type==='gap'){
+    const inp=document.getElementById('gapIn');const v=inp?inp.value:'';
+    if(!v.trim())return;LSN.answered=true;LSN.total++;
+    const ok=gapMatch(v,it);
+    srsRecord(it,ok,null);
+    if(inp)inp.disabled=true;
+    lResult(ok,'Doğru cevap: '+it.answer+(it.ex?' — '+it.ex:''));
+  }else if(it.type==='spot'){
+    if(LSN.sel==null)return;LSN.answered=true;LSN.total++;
+    const ok=LSN.sel===it.badIdx;
+    srsRecord(it,ok,null);
+    document.querySelectorAll('.spotw').forEach((s,j)=>{if(j===it.badIdx)s.classList.add('correct');if(j===LSN.sel&&!ok)s.classList.add('wrong');});
+    lResult(ok,'Hata: “'+it.wrong+'” → '+it.fix+(it.hint?' ('+it.hint+')':''));
   }
 }
 function lResult(ok,ex){
