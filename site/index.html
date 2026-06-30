@@ -1539,7 +1539,7 @@ const GDET={
 /* ============================== DURUM / KAYIT ============================== */
 const KEY="epe_state_v1";
 let S=load();
-function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[]}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[]}}}
+function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[],vsrs:o.vsrs||{}}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[],vsrs:{}}}}
 function save(){S._updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(S));schedulePush();}
 
 /* ============================== BULUT SENKRON (Supabase + e-posta/şifre girişi) ============================== */
@@ -2066,7 +2066,11 @@ function renderDash(){
   </div>`;
   renderCoachChat();renderCoachMem();
 }
-function reviewNudge(){const d=dueCount();if(!d)return '';return `<div onclick="switchTo('grammar')" style="cursor:pointer;background:var(--amber-soft);border:1px solid var(--amber);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:13px;font-weight:600">⏰ Gramerde ${d} soru tekrar zamanı geldi — dokun, "Günün Tekrarı"nı çöz.</div>`;}
+function reviewNudge(){
+  const d=dueCount(),v=vDueCount();if(!d&&!v)return '';
+  const parts=[];if(d)parts.push(`<span onclick="switchTo('grammar')" style="cursor:pointer">gramerde <b>${d}</b> soru</span>`);if(v)parts.push(`<span onclick="switchTo('vocab')" style="cursor:pointer">kelimede <b>${v}</b> kart</span>`);
+  return `<div style="background:var(--amber-soft);border:1px solid var(--amber);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:13px;font-weight:600">⏰ Tekrar zamanı: ${parts.join(' · ')} — dokun ve aralıklı tekrarı çöz.</div>`;
+}
 function renderTodayTasks(wi){
   if(S.flexMode){
     const blocks=flexTodayBlocks();
@@ -2176,8 +2180,74 @@ function fmtRange(w){
 let curTopic=0,curLevel="all",cardIdx=0,flipped=false;
 function wKey(ti,en){return ti+":"+en;}
 function filteredWords(){return TOPICS[curTopic].words.filter(w=>curLevel==="all"||w.lvl===curLevel);}
+/* ===== Kelime · aralıklı tekrar (SRS) + konu ustalığı ===== */
+function vsrsUpdate(vid,ok){
+  const today=stripTime(new Date()).getTime();
+  let s=S.vsrs[vid]||{reps:0,interval:0,ease:2.5,due:0,lapses:0};
+  if(ok){ if(s.reps<=0)s.interval=1; else if(s.reps===1)s.interval=3; else s.interval=Math.min(180,Math.round(s.interval*s.ease)); s.reps++; s.ease=Math.min(2.8,(s.ease||2.5)+0.02); }
+  else { s.reps=0; s.interval=1; s.lapses=(s.lapses||0)+1; s.ease=Math.max(1.3,(s.ease||2.5)-0.2); }
+  s.due=today+s.interval*86400000; S.vsrs[vid]=s;
+}
+function vDueVids(){const now=stripTime(new Date()).getTime();return Object.keys(S.vsrs).filter(k=>(S.vsrs[k].due||0)<=now);}
+function vDueCount(){return vDueVids().length;}
+function vWordByVid(vid){const i=vid.indexOf(':');if(i<0)return null;const ti=+vid.slice(0,i);const en=vid.slice(i+1);const t=TOPICS[ti];if(!t)return null;const w=t.words.find(x=>x.en===en);return w?{ti:ti,w:w,name:t.name,vid:vid}:null;}
+function vDueWords(){return vDueVids().map(vWordByVid).filter(Boolean);}
+function topicMastery(ti){
+  const t=TOPICS[ti];if(!t)return {level:0,frac:0};
+  let total=t.words.length,strong=0,seen=0;
+  t.words.forEach(w=>{const vid=ti+":"+w.en;const s=S.vsrs[vid];if(s){seen++;if((s.reps||0)>=2)strong++;}else if(S.known[vid])seen++;});
+  const frac=total?strong/total:0;let level=0;
+  if(seen>0)level=1; if(frac>=0.4)level=Math.max(level,2); if(frac>=0.75)level=3;
+  return {level:level,frac:frac,strong:strong,total:total,seen:seen};
+}
+/* Kelime Tekrarı (flashcard tarzı aralıklı tekrar) */
+let VR={};
+function startVocabReview(){
+  let due=vDueWords();
+  if(due.length<5){
+    const extra=[];TOPICS.forEach((t,ti)=>t.words.forEach(w=>{const vid=ti+":"+w.en;const s=S.vsrs[vid];if(S.known[vid]&&(!s||(s.reps||0)<2)){extra.push({ti:ti,w:w,name:t.name,vid:vid});}}));
+    const have={};due.forEach(d=>have[d.vid]=1);
+    due=due.concat(shuffle(extra.filter(e=>!have[e.vid])).slice(0,20-due.length));
+  }
+  if(!due.length){alert('Henüz tekrar edilecek kelime yok. Önce birkaç kelimeyi "Biliyorum" işaretle ya da Öğren Modu’nu kullan — sonra aralıklı tekrar burada birikir!');return;}
+  VR={list:shuffle(due).slice(0,20),i:0,flipped:false,correct:0,total:0};
+  document.getElementById("learnOverlay").classList.add("show");renderVocabReview();
+}
+function renderVocabReview(){
+  const it=VR.list[VR.i];if(!it)return endVocabReview();
+  const ex=EXAMPLES[it.w.en];
+  document.getElementById("learnOverlay").innerHTML=`<div class="learn-wrap">
+    <div class="learn-top"><h2 style="margin:0">⏰ Kelime Tekrarı</h2><button class="btn ghost" onclick="closeLearn()">✕ Kapat</button></div>
+    <p class="muted">${VR.i+1} / ${VR.list.length} · aralıklı tekrar · ${esc(it.name)}</p>
+    <div class="flash ${VR.flipped?'flipped':''}" onclick="vrFlip()">
+      <div class="flash-inner">
+        <div class="face front"><span class="tag">İngilizce</span><span class="lvl ${it.w.lvl}" style="position:absolute;top:12px;right:14px">${it.w.lvl}</span><div class="word">${esc(it.w.en)}</div><div class="pos">${esc(it.w.pos)}</div><div class="hint">çevirmek için dokun</div></div>
+        <div class="face back"><span class="tag" style="color:#9fb0cc">Türkçe · ${esc(it.w.pos)}</span><div class="tr">${esc(it.w.tr)}</div>${ex?`<div class="ex">"${esc(ex)}"</div>`:''}</div>
+      </div>
+    </div>
+    ${VR.flipped?`<div class="flash-controls">
+      <button class="btn ghost" onclick="vrGrade(false)">✗ Hatırlamadım</button>
+      <button class="btn ghost" onclick="vrExample()" title="bağlam">💬 Örnek</button>
+      <button class="btn green" onclick="vrGrade(true)">✓ Hatırladım</button>
+    </div><div id="vrEx" style="margin-top:8px"></div>`:`<p class="muted" style="text-align:center;margin-top:12px">Anlamı düşün, sonra kartı çevir.</p>`}
+  </div>`;
+}
+function vrFlip(){VR.flipped=!VR.flipped;renderVocabReview();}
+function vrGrade(ok){const it=VR.list[VR.i];VR.total++;if(ok){VR.correct++;S.known[it.vid]=true;}vsrsUpdate(it.vid,ok);save();VR.i++;VR.flipped=false;if(VR.i>=VR.list.length)return endVocabReview();renderVocabReview();}
+async function vrExample(){const out=document.getElementById('vrEx');if(!out)return;const it=VR.list[VR.i];if(!hasKey()){out.innerHTML=aiOffBox();return;}out.innerHTML='<div class="ai-hint"><span class="spin"></span>Örnek üretiliyor…</div>';try{const r=await gemini("'"+it.w.en+"' kelimesini kullanan, "+it.w.lvl+" seviyesinde 1 kısa İngilizce örnek cümle yaz, hemen altına parantez içinde Türkçesini ekle. Sadece cümleyi ver.",SYS_TUTOR);out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}catch(e){out.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}}
+function endVocabReview(){
+  const pct=Math.round(VR.correct/Math.max(1,VR.total)*100);S.xp=(S.xp||0)+VR.correct*5;bumpStreak();save();
+  document.getElementById("learnOverlay").innerHTML=`<div class="learn-wrap" style="text-align:center">
+    <div class="learn-top"><h2 style="margin:0">⏰ Kelime Tekrarı</h2><button class="btn ghost" onclick="closeLearn()">✕ Kapat</button></div>
+    <div style="font-size:60px;margin:10px 0">${pct>=80?'🏆':pct>=50?'🎉':'💪'}</div>
+    <h3 style="font-family:'Baloo 2',sans-serif">${VR.total} kelime tekrar edildi · %${pct} hatırlandı</h3>
+    <p class="muted">Hatırlamadıkların yakında yeniden gelir, hatırladıkların daha seyrek — aralıklı tekrarın gücü bu! 💪</p>
+    <button class="btn green" style="margin-top:14px" onclick="closeLearn();renderVocab();renderDash();">Bitir</button>
+  </div>`;
+}
 function renderVocab(){
   const el=document.getElementById("vocab");const kc=knownCount(),tw=totalWords();
+  const vdue=vDueCount();const tmc=[0,0,0,0];TOPICS.forEach((t,ti)=>tmc[topicMastery(ti).level]++);
   el.innerHTML=`<div class="card">
     <div class="eyebrow">Kelime Kartları <span class="ai-badge">AI destekli</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -2185,7 +2255,9 @@ function renderVocab(){
       <button class="btn green" onclick="startLearn()">📚 Öğren Modu</button>
     </div>
     <div class="bar green" style="margin-top:8px"><i style="width:${Math.round(kc/tw*100)}%"></i></div>
-    <p class="muted" style="margin:10px 0 12px;font-size:13px">Kartı çevirmek için dokun; bildiklerini "Biliyorum"la işaretle. Önerilen sıra: <b>A2 → B1 → B2</b>. Kartın altında örnek cümleler ve <b>kendi cümleni AI'ya kontrol ettirme</b> var.</p>
+    <div style="display:flex;gap:14px;margin-top:8px;font-size:13px;font-weight:700"><span>🥇 ${tmc[3]}</span><span>🥈 ${tmc[2]}</span><span>🥉 ${tmc[1]}</span><span class="muted" style="font-weight:400">/ ${TOPICS.length} konu</span></div>
+    <button class="btn ${vdue?'green':'ghost'}" style="width:100%;margin-top:10px" onclick="startVocabReview()">⏰ Kelime Tekrarı${vdue?' · '+vdue+' kelime hazır':''}</button>
+    <p class="muted" style="margin:10px 0 12px;font-size:13px">Kartı çevir, bildiklerini "Biliyorum"la işaretle. <b>Aralıklı tekrar:</b> öğrendiğin kelimeler tam unutmadan önce <b>Kelime Tekrarı</b>'nda yeniden gelir; her doğru hatırlama aralığı uzatır. Konular bronz→altın ustalıkla ilerler.</p>
     <div class="lvl-row" id="lvlRow"></div>
     <div class="deck-row" id="deckRow"></div>
     <div id="deckArea"></div>
@@ -2207,7 +2279,8 @@ function renderDeckRow(){
   document.getElementById("deckRow").innerHTML=TOPICS.map((d,i)=>{
     const ws=d.words.filter(w=>curLevel==="all"||w.lvl===curLevel);
     const known=ws.filter(w=>S.known[wKey(i,w.en)]).length;
-    return `<button class="deck-btn ${i===curTopic?'active':''}" onclick="selDeck(${i})">${d.name} <span style="opacity:.7">(${known}/${ws.length})</span></button>`;
+    const badge=masteryBadge(topicMastery(i).level);
+    return `<button class="deck-btn ${i===curTopic?'active':''}" onclick="selDeck(${i})">${badge?badge+' ':''}${d.name} <span style="opacity:.7">(${known}/${ws.length})</span></button>`;
   }).join("");
 }
 function selDeck(i){curTopic=i;cardIdx=0;flipped=false;renderDeckRow();renderDeckArea();}
@@ -2270,7 +2343,9 @@ function flip(){flipped=!flipped;document.querySelector("#deckArea .flash").clas
 function nextCard(e){e&&e.stopPropagation();const n=filteredWords().length;if(cardIdx<n-1){cardIdx++;flipped=false;renderDeckArea();}}
 function prevCard(e){e&&e.stopPropagation();if(cardIdx>0){cardIdx--;flipped=false;renderDeckArea();}}
 function markKnown(e){e&&e.stopPropagation();const words=filteredWords();const k=wKey(curTopic,words[cardIdx].en);
-  S.known[k]=!S.known[k];save();renderDeckRow();renderLvlRow();
+  S.known[k]=!S.known[k];
+  if(S.known[k])vsrsUpdate(k,true); else if(S.vsrs[k])S.vsrs[k].due=stripTime(new Date()).getTime(); // "Tekrar et" → yeniden vadesi gelsin
+  save();renderDeckRow();renderLvlRow();
   if(S.known[k]&&cardIdx<words.length-1){cardIdx++;flipped=false;}renderDeckArea();renderDash();}
 
 /* ============================== OKUMA ============================== */
@@ -2460,7 +2535,8 @@ function learnTest(){
 function learnAnswer(j){
   if(L.testAns[L.testIdx]!==undefined)return;
   const w=L.objs[L.testIdx];const opts=L._testOpts[L.testIdx];
-  L.testAns[L.testIdx]=opts[j];if(opts[j]===w.tr)L.testScore++;
+  L.testAns[L.testIdx]=opts[j];const ok=opts[j]===w.tr;if(ok)L.testScore++;
+  vsrsUpdate(wKey(curTopic,w.en),ok);save();
   renderLearnStep();
 }
 function learnTestNext(){if(L.testIdx<L.objs.length-1){L.testIdx++;renderLearnStep();}else{L.step=3;renderLearnStep();}}
@@ -2473,7 +2549,7 @@ function learnDone(){
      <button class="btn ghost" onclick="closeLearn()">Sadece kapat</button>
    </div>`;
 }
-function learnFinishKnown(){L.objs.forEach(w=>{S.known[wKey(curTopic,w.en)]=true;});save();closeLearn();renderVocab();renderDash();}
+function learnFinishKnown(){L.objs.forEach(w=>{const k=wKey(curTopic,w.en);S.known[k]=true;vsrsUpdate(k,true);});save();closeLearn();renderVocab();renderDash();}
 
 /* ============================== GRAMER ============================== */
 function lvlClass(l){return l.indexOf("B2")>=0?"B2":l.indexOf("B1")>=0?"B1":"A2";}
