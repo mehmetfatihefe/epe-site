@@ -292,6 +292,12 @@
   .spotw.sel{border-color:var(--amber);background:var(--amber-soft)}
   .spotw.correct{border-color:var(--green);background:var(--green-soft)}
   .spotw.wrong{border-color:var(--red);background:var(--red-soft)}
+  .ctxbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 14px;margin:8px 0}
+  .ctxline{padding:9px 0;border-bottom:1px dashed var(--line)}
+  .ctxline:last-child{border-bottom:none}
+  .ctxen{font-size:16px;line-height:1.55}
+  .ctxtr{color:var(--muted);font-size:13px;margin-top:2px}
+  .ctxhl{background:var(--amber-soft);border-bottom:2px solid var(--amber);border-radius:4px;padding:0 3px;cursor:pointer;font-weight:600}
   .build-answer{min-height:52px;border-bottom:2px dashed var(--line);display:flex;flex-wrap:wrap;gap:8px;padding:8px 0 14px;margin-bottom:18px;align-content:flex-start}
   .build-bank{display:flex;flex-wrap:wrap;gap:8px}
   .chip{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 13px;font-size:16px;cursor:pointer;box-shadow:0 2px 0 var(--line);user-select:none}
@@ -2503,7 +2509,7 @@ function renderGrammar(){
     <div class="bar green" style="margin-top:8px"><i style="width:${Math.round(done/GRAMMAR.length*100)}%"></i></div>
     <div style="display:flex;gap:14px;margin-top:8px;font-size:13px;font-weight:700"><span>🥇 ${mc[3]} altın</span><span>🥈 ${mc[2]} gümüş</span><span>🥉 ${mc[1]} bronz</span></div>
     <p class="muted" style="margin:4px 0 0;font-size:12px">Ustalık, sınavı geçmenle değil <b>aralıklı tekrarda tekrar tekrar doğru yapmanla</b> yükselir.</p>
-    <p class="muted" style="margin:10px 0 0;font-size:13px">Her ders kademeli: <b>tanı → boşluk doldur → cümle kur → dönüştür → hata bul → kendi cümleni yaz</b> (AI kontrol eder). Sınav formatlarını (Cloze, Closest Meaning) birebir çalışırsın. <b>Aralıklı tekrar</b> ile çözdüğün sorular tam unutmadan önce yeniden gelir.</p>
+    <p class="muted" style="margin:10px 0 0;font-size:13px">Her ders kademeli: <b>fark et → kural → gerçek konuşmada gör → çöz → üret → kendi cümleni yaz</b> (AI kontrol eder). Sınav formatlarını (Cloze, Closest Meaning) birebir çalışırsın. <b>Aralıklı tekrar</b> ile çözdüğün sorular tam unutmadan önce yeniden gelir.</p>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
       <button class="btn green" style="width:100%" onclick="startDueReview()">⏰ Günün Tekrarı${due?' · '+due+' soru hazır':''}</button>
       <button class="btn amber" style="width:100%" onclick="startReview()">🔁 Karışık Tekrar — bitmiş konuları karıştır</button>
@@ -2601,6 +2607,74 @@ const GPLUS2={
 };
 function makeSpot(sp){const words=sp.bad.split(/\s+/);const norm=w=>w.replace(/[^A-Za-z']/g,'').toLowerCase();let idx=words.findIndex(w=>norm(w)===norm(sp.wrong));if(idx<0)idx=0;return {type:'spot',bad:sp.bad,words:words,badIdx:idx,wrong:sp.wrong,fix:sp.fix,hint:sp.hint};}
 function gapFromMC(q){if(!/_{2,}/.test(q.q))return null;const ans=q.opts[q.a];if(!ans||ans.length>16)return null;return {type:'gap',q:q.q,answer:ans,ex:q.ex,alts:[]};}
+
+/* ===== Faz 4: bağlam / diyalog (yapıyı anlamlı kullanımda gör) ===== */
+const GCTX={
+ G01:{focus:"am/is/are, there is/are ve a/the kullanımına dikkat et.",lines:[
+   {en:"Hi! [[There is]] a new café near our school.",tr:"Selam! Okulumuzun yanında yeni bir kafe var."},
+   {en:"Really? [[Is]] it good?",tr:"Sahi mi? İyi mi?"},
+   {en:"Yes, [[the]] coffee [[is]] great and [[there are]] nice cakes too.",tr:"Evet, kahvesi harika ve güzel kekler de var."}]},
+ G02:{focus:"şu an (am cooking) ile alışkanlık (cook / smells -s) farkı.",lines:[
+   {en:"What [[are]] you [[doing]]?",tr:"Ne yapıyorsun?"},
+   {en:"I [[am cooking]] dinner. I usually [[cook]] at seven.",tr:"Akşam yemeği yapıyorum. Genelde yedide pişiririm."},
+   {en:"It [[smells]] great!",tr:"Harika kokuyor!"}]},
+ G03:{focus:"Past Simple (visited) + Past Continuous (were eating) + used to.",lines:[
+   {en:"How [[was]] your weekend?",tr:"Hafta sonun nasıldı?"},
+   {en:"Great! I [[visited]] my grandparents. While we [[were eating]], it [[started]] to rain.",tr:"Harika! Büyükannemleri ziyaret ettim. Yemek yerken yağmur başladı."},
+   {en:"We [[used to]] go there every summer.",tr:"Her yaz oraya giderdik."}]},
+ G04:{focus:"going to (kanıt) / will (anlık karar) / am meeting (plan).",lines:[
+   {en:"The sky is dark. It [[is going to]] rain.",tr:"Gökyüzü karanlık. Yağmur yağacak."},
+   {en:"I [[will]] take an umbrella then.",tr:"O zaman bir şemsiye alırım."},
+   {en:"I [[am meeting]] Sara at five, by the way.",tr:"Bu arada beşte Sara'yla buluşuyorum."}]},
+ G05:{focus:"mustn't (yasak) / have to (zorunluluk) / should (tavsiye).",lines:[
+   {en:"You [[mustn't]] use your phone in the exam.",tr:"Sınavda telefonunu kullanamazsın."},
+   {en:"[[Do I have to]] turn it off completely?",tr:"Tamamen kapatmak zorunda mıyım?"},
+   {en:"Yes. And you [[should]] arrive early.",tr:"Evet. Ayrıca erken gelmelisin."}]},
+ G06:{focus:"-er/more...than, the best, the more...the better.",lines:[
+   {en:"This phone is [[more expensive than]] that one.",tr:"Bu telefon şundan daha pahalı."},
+   {en:"But it has [[the best]] camera here.",tr:"Ama buradaki en iyi kameraya sahip."},
+   {en:"True. [[The more]] you pay, [[the better]] the quality.",tr:"Doğru. Ne kadar çok ödersen kalite o kadar iyi."}]},
+ G07:{focus:"much/many, (a) little / (a) few, plenty of.",lines:[
+   {en:"Is there [[much]] coffee left?",tr:"Çok kahve kaldı mı?"},
+   {en:"Only [[a little]]. But there are [[a few]] teabags.",tr:"Sadece biraz. Ama birkaç poşet çay var."},
+   {en:"We need [[plenty of]] water for the guests.",tr:"Misafirler için bol suya ihtiyacımız var."}]},
+ G08:{focus:"enjoy/avoid + -ing, want + to, help + yalın fiil.",lines:[
+   {en:"I enjoy [[reading]] before bed.",tr:"Yatmadan önce okumaktan keyif alırım."},
+   {en:"I want [[to try]] that too. It might help me [[sleep]].",tr:"Ben de denemek istiyorum. Uyumama yardım edebilir."},
+   {en:"Then avoid [[using]] your phone.",tr:"O zaman telefonunu kullanmaktan kaçın."}]},
+ G09:{focus:"such a + isim, so...that, adj + enough.",lines:[
+   {en:"It was [[such a]] long film!",tr:"Öyle uzun bir filmdi ki!"},
+   {en:"Yes, [[so]] long [[that]] I fell asleep.",tr:"Evet, o kadar uzundu ki uyuyakaldım."},
+   {en:"The seats weren't comfortable [[enough]].",tr:"Koltuklar yeterince rahat değildi."}]},
+ G10:{focus:"who (kişi), whose (iyelik), where (yer).",lines:[
+   {en:"That's the man [[who]] lives next door.",tr:"Komşumuz olan adam o."},
+   {en:"The one [[whose]] dog barks all night?",tr:"Köpeği bütün gece havlayan mı?"},
+   {en:"Yes, in the house [[where]] we had the party.",tr:"Evet, parti yaptığımız evdeki."}]},
+ G11:{focus:"be + V3: was built / is visited / is being repaired.",lines:[
+   {en:"When [[was]] this bridge [[built]]?",tr:"Bu köprü ne zaman yapıldı?"},
+   {en:"It [[was built]] in 1990. It [[is visited]] by thousands.",tr:"1990'da yapıldı. Binlerce kişi tarafından ziyaret ediliyor."},
+   {en:"I heard it [[is being repaired]] now.",tr:"Şimdi onarıldığını duydum."}]},
+ G12:{focus:"Type 2 (were/would), unless = if not, Type 3 (had+V3 / would have+V3).",lines:[
+   {en:"If I [[were]] you, I [[would]] study tonight.",tr:"Yerinde olsam bu gece çalışırdım."},
+   {en:"[[Unless]] I rest, I can't focus.",tr:"Dinlenmezsem odaklanamam."},
+   {en:"If you [[had started]] earlier, you [[wouldn't have been]] tired.",tr:"Daha erken başlasaydın yorgun olmazdın."}]},
+ G13:{focus:"backshift (is→was, will→would), say vs tell.",lines:[
+   {en:"What did she say?",tr:"Ne dedi?"},
+   {en:"She [[said]] she [[was]] busy and she [[would]] call later.",tr:"Meşgul olduğunu ve sonra arayacağını söyledi."},
+   {en:"She also [[told]] me she [[had]] finished.",tr:"Bitirdiğini de bana söyledi."}]},
+ G14:{focus:"have/get sth done, make sb + yalın fiil.",lines:[
+   {en:"Your hair looks nice!",tr:"Saçın güzel görünüyor!"},
+   {en:"Thanks, I [[had it cut]] yesterday.",tr:"Sağ ol, dün kestirdim."},
+   {en:"I need to [[get my car repaired]] too. My boss [[made me]] wait all day.",tr:"Benim de arabamı tamir ettirmem lazım. Patronum beni bütün gün bekletti."}]},
+ G15:{focus:"although + cümle, despite + isim, so / however.",lines:[
+   {en:"[[Although]] it was raining, we went out.",tr:"Yağmur yağmasına rağmen çıktık."},
+   {en:"[[Despite]] the cold, it was fun.",tr:"Soğuğa rağmen eğlenceliydi."},
+   {en:"It got late, [[so]] we left; [[however]], we'll go again.",tr:"Geç oldu, bu yüzden ayrıldık; ancak tekrar gideceğiz."}]},
+ G16:{focus:"noun clause (what he said), reduced clause (standing there).",lines:[
+   {en:"Do you know [[what]] he wants?",tr:"Ne istediğini biliyor musun?"},
+   {en:"[[What he said]] surprised me. The man [[standing]] there told us.",tr:"Söyledikleri beni şaşırttı. Orada duran adam bize söyledi."},
+   {en:"I'm not sure [[whether]] it's true.",tr:"Doğru mu emin değilim."}]}
+};
 
 /* ============================== ARALIKLI TEKRAR (SRS) + HATA DEFTERİ ============================== */
 function srsHash(s){let h=5381;s=String(s);for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return (h>>>0).toString(36);}
@@ -2710,6 +2784,9 @@ function buildLesson(id){
   if(noticeEx.length>=2)items.push({type:'notice',title:g.title,ex:noticeEx,q:'Aşağıdaki örnekleri oku — ortak kalıbı/kuralı fark edebiliyor musun? 🤔'});
   // 1) KURAL
   items.push({type:'tip',title:g.title,html:((det.lesson||[]).slice(0,3).map(s=>'<b>'+s.h+'</b><br>'+s.p).join('<br><br>')||g.summary)+'<br><br>⚠️ '+g.mistake});
+  // 2) BAĞLAM: yapıyı gerçek bir konuşmada gör
+  const ctx=GCTX[id];
+  if(ctx&&ctx.lines&&ctx.lines.length)items.push({type:'context',lines:ctx.lines,focus:ctx.focus,rule:strip(g.summary)});
   const sents=lessonSents(id);
   const mcPool=shuffle((det.mini||g.quiz||[]).concat(det.test||plus.test||[]));
   // 1) TANIMA (kolay): çoktan seçmeli + eşleştirme
@@ -2774,6 +2851,13 @@ function renderLesson(){
       <div style="margin-top:6px">${it.ex.map(e=>`<div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0"><div style="font-size:16px">${e.en}</div><div class="muted" style="font-size:13px;margin-top:2px">${esc(e.tr)}</div></div>`).join('')}</div>
       <p class="muted" style="font-size:12.5px;margin-top:4px">Kalıbı tahmin et, sonra kuralla karşılaştır — böylece daha kalıcı öğrenirsin.</p></div>`;
     foot=`<button class="bigbtn green" onclick="lessonNext()">Kuralı göster →</button>`;
+  }else if(it.type==='context'){
+    body=`<div class="lesson-q"><div style="font-weight:700;color:var(--green);font-size:13px;letter-spacing:1px">💬 GERÇEK KULLANIM</div><h2 style="font-size:18px">Bu yapıyı bir konuşmada gör</h2>
+      <div class="ctxbox">${it.lines.map(l=>`<div class="ctxline"><div class="ctxen">${ctxRender(l.en)}</div><div class="ctxtr">${esc(l.tr)}</div></div>`).join('')}</div>
+      ${it.focus?'<div class="ai-hint" style="margin-top:8px">👀 '+esc(it.focus)+'</div>':''}
+      <div id="ctxTip"></div>
+      <p class="muted" style="font-size:12px;margin-top:6px">Vurgulu yapılara dokun → kuralı hatırla.</p></div>`;
+    foot=`<button class="bigbtn green" onclick="lessonNext()">Anladım, devam →</button>`;
   }else if(it.type==='tip'){
     body=`<div class="lesson-q"><div style="font-weight:700;color:var(--amber);font-size:13px;letter-spacing:1px">💡 KURAL</div><h2>${esc(it.title)}</h2><div class="lprompt" style="font-size:15px;line-height:1.75">${it.html}</div></div>`;
     foot=`<button class="bigbtn green" onclick="lessonNext()">${LSN.i===0?'Başla →':'Devam →'}</button>`;
@@ -2831,6 +2915,8 @@ function renderLesson(){
   if(it.type==='match')renderMatch();
   if(it.type==='gap')setTimeout(function(){const g=document.getElementById('gapIn');if(g)g.focus();},100);
 }
+function ctxRender(s){return esc(s).replace(/\[\[(.+?)\]\]/g,'<span class="ctxhl" onclick="ctxReveal()">$1</span>');}
+function ctxReveal(){const t=document.getElementById('ctxTip');if(!t)return;const it=LSN.items[LSN.i];t.innerHTML='<div class="ai-out box" style="margin-top:8px;font-size:13px">💡 '+esc(it.rule||'')+'</div>';t.scrollIntoView({block:'nearest'});}
 function lGapInput(){const v=(document.getElementById('gapIn')||{}).value||'';const btn=document.getElementById('lbtn');if(btn&&!LSN.answered){if(v.trim()){btn.className='bigbtn green';btn.disabled=false;}else{btn.className='bigbtn gray';btn.disabled=true;}}}
 function lPickSpot(j){if(LSN.answered)return;LSN.sel=j;document.querySelectorAll('.spotw').forEach((s,k)=>s.classList.toggle('sel',k===j));const btn=document.getElementById('lbtn');btn.className='bigbtn green';btn.disabled=false;}
 function gapMatch(v,it){const n=normalize(v);if(n===normalize(it.answer))return true;return (it.alts||[]).some(a=>normalize(a)===n);}
@@ -2860,6 +2946,7 @@ function lessonAskContext(){
   else if(it.type==='transform')c+="Öğrenci '"+it.from+"' cümlesini aynı anlama gelecek şekilde yeniden kuruyor. Doğru cevap: '"+it.answer+"'.";
   else if(it.type==='spot')c+="Hatalı cümle: '"+it.bad+"'. Hatalı kelime: '"+it.wrong+"' → doğrusu: '"+it.fix+"'.";
   else if(it.type==='write')c+="Öğrenci bu kuralla kendi cümlesini yazıyor: "+(it.rule||"")+".";
+  else if(it.type==='context')c+="Diyalog bağlamı: "+it.lines.map(l=>strip(l.en)).join(' / ')+".";
   else if(it.type==='tip')c+="Kural özeti: "+strip(it.html);
   return c;
 }
