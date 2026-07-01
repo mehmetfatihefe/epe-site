@@ -1974,12 +1974,27 @@ async function gemini(prompt,system){return callGemini([{role:"user",parts:[{tex
 async function geminiChat(history,system){return callGemini(history.map(m=>({role:m.role==="bot"?"model":"user",parts:[{text:m.text}]})),system);}
 /* Görsel üretimi — Gemini image modelleri (inlineData base64 döner) */
 const IMG_MODELS=["gemini-2.5-flash-image","gemini-3.1-flash-image-preview","gemini-2.5-flash-image-preview","gemini-2.0-flash-preview-image-generation"];
+let _imgModelsDiscovered=null;
+async function discoverImageModels(){
+  if(!usePersonalKey())return [];
+  if(_imgModelsDiscovered!==null)return _imgModelsDiscovered;
+  try{
+    const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models?key="+encodeURIComponent(S.apiKey.trim()));
+    const data=await res.json();
+    if(data.error){_imgModelsDiscovered=[];return _imgModelsDiscovered;}
+    const all=(data.models||[]).filter(m=>(m.supportedGenerationMethods||[]).indexOf("generateContent")>=0).map(m=>m.name.replace("models/",""));
+    _imgModelsDiscovered=all.filter(n=>/image/i.test(n));
+    return _imgModelsDiscovered;
+  }catch(e){_imgModelsDiscovered=[];return _imgModelsDiscovered;}
+}
 async function geminiImage(prompt){
   if(!hasKey())throw new Error("API anahtarı yok. ⚙️ AI Ayarı'ndan Gemini anahtarını gir.");
   const personal=usePersonalKey();
   const body={contents:[{parts:[{text:prompt}]}],generationConfig:{responseModalities:["TEXT","IMAGE"]}};
   let lastErr;
-  for(const model of IMG_MODELS){
+  const discovered=await discoverImageModels();
+  const models=discovered.concat(IMG_MODELS.filter(m=>discovered.indexOf(m)<0));
+  for(const model of models){
     try{
       let res;
       if(personal){
@@ -1996,7 +2011,11 @@ async function geminiImage(prompt){
       lastErr=new Error("Bu model görsel döndürmedi");
     }catch(e){lastErr=e;}
   }
-  throw new Error((lastErr&&lastErr.message)||"Görsel üretilemedi. Hesabın görsel üretimini desteklemiyor olabilir; ⚙️ AI Ayarı'ndan kendi anahtarını deneyebilirsin.");
+  if(personal&&discovered.length===0)
+    throw new Error("Bu anahtarda görsel üretebilen model YOK. Gemini görsel üretimi (Nano Banana) senin bölgende/hesabında açık değil olabilir. Not: metin ve öğrenme stratejisi özellikleri çalışmaya devam eder.");
+  if(!personal)
+    throw new Error("Sitenin ortak anahtarı görsel üretmiyor. ⚙️ AI Ayarı'ndan kendi ücretsiz Gemini anahtarını gir ve tekrar dene.");
+  throw new Error("Görsel üretilemedi: "+((lastErr&&lastErr.message)||"bilinmeyen hata")+".");
 }
 /* Kelime görseli önbelleği (S'ye girmez → sync şişmez; oturum + kotayla localStorage) */
 const WIMG=(function(){try{return JSON.parse(localStorage.getItem("epe_wimg")||"{}");}catch(e){return {};}})();
