@@ -1920,7 +1920,7 @@ async function authGateInit(){
 /* ============================== AI (Gemini) + SES ============================== */
 /* Ortak anahtar: kullanıcı kendi anahtarını girmezse Netlify Function aracısı üzerinden ortak anahtar kullanılır */
 const AI_SHARED=true;                        // ortak anahtar aktif
-const AI_PROXY="/.netlify/functions/gemini"; // gizli anahtarı tutan aracı
+const AI_PROXY="/api/gemini";                // gizli anahtarı tutan aracı (Cloudflare Pages Function)
 function usePersonalKey(){return !!(S.apiKey&&S.apiKey.trim());}
 function hasKey(){return AI_SHARED||usePersonalKey();}
 const MODEL_FALLBACKS=["gemini-2.0-flash","gemini-2.5-flash","gemini-2.5-flash-lite","gemini-1.5-flash","gemini-flash-latest","gemini-2.0-flash-001"];
