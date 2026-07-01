@@ -2000,7 +2000,50 @@ async function geminiImage(prompt){
 }
 /* Kelime görseli önbelleği (S'ye girmez → sync şişmez; oturum + kotayla localStorage) */
 const WIMG=(function(){try{return JSON.parse(localStorage.getItem("epe_wimg")||"{}");}catch(e){return {};}})();
-function wimgSet(vid,url){WIMG[vid]=url;const keys=Object.keys(WIMG);if(keys.length>12){delete WIMG[keys[0]];}try{localStorage.setItem("epe_wimg",JSON.stringify(WIMG));}catch(e){/* kota dolduysa sessiz geç */}}
+function wimgSet(vid,url){WIMG[vid]=url;const keys=Object.keys(WIMG);if(keys.length>24){delete WIMG[keys[0]];}try{localStorage.setItem("epe_wimg",JSON.stringify(WIMG));}catch(e){/* kota dolduysa sessiz geç */}}
+/* Görseli küçült (paylaşımlı depo küçük kalsın diye ~256px JPEG) */
+function downscaleImg(dataUrl,max,q){return new Promise(function(resolve){
+  try{
+    const im=new Image();
+    im.onload=function(){let w=im.width,h=im.height;const m=max||256;
+      if(w>=h){if(w>m){h=Math.round(h*m/w);w=m;}}else{if(h>m){w=Math.round(w*m/h);h=m;}}
+      const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);
+      try{resolve(c.toDataURL('image/jpeg',q||0.82));}catch(e){resolve(dataUrl);}};
+    im.onerror=function(){resolve(dataUrl);};im.src=dataUrl;
+  }catch(e){resolve(dataUrl);}
+});}
+/* Paylaşımlı görsel deposu (Supabase word_images tablosu) — herkes aynı görseli görür */
+const IMG_TABLE="word_images";
+const WIMG_CHECKED={};
+function imgHeaders(extra){return Object.assign({"apikey":sbKey,"Authorization":"Bearer "+((session&&session.access_token)||sbKey),"Content-Type":"application/json"},extra||{});}
+async function sharedImgGet(vid){
+  if(!sbConfigured())return null;
+  try{
+    const url=sbUrl+"/rest/v1/"+IMG_TABLE+"?word=eq."+encodeURIComponent(vid)+"&select=img";
+    const r=await fetch(url,{headers:imgHeaders()});
+    if(!r.ok)return null;
+    const rows=await r.json();
+    return (rows&&rows[0]&&rows[0].img)?rows[0].img:null;
+  }catch(e){return null;}
+}
+async function sharedImgPut(vid,img){
+  if(!sbConfigured()||!loggedIn())return false;
+  const body=JSON.stringify([{word:vid,img:img,updated_at:new Date().toISOString()}]);
+  const opt=function(){return {method:"POST",headers:imgHeaders({"Prefer":"resolution=merge-duplicates,return=minimal"}),body:body};};
+  try{
+    let r=await fetch(sbUrl+"/rest/v1/"+IMG_TABLE,opt());
+    if(r.status===401&&await refreshSession())r=await fetch(sbUrl+"/rest/v1/"+IMG_TABLE,opt());
+    return r.ok;
+  }catch(e){return false;}
+}
+async function loadSharedImg(vid,en){
+  if(WIMG[vid]||WIMG_CHECKED[vid]||!sbConfigured())return;
+  WIMG_CHECKED[vid]=1;
+  const img=await sharedImgGet(vid);
+  if(!img)return;
+  wimgSet(vid,img);
+  if(curWord()&&wKey(curTopic,curWord().en)===vid){const o=document.getElementById('vimg');if(o&&!o.querySelector('img'))o.innerHTML='<img src="'+img+'" alt="'+esc(en)+'" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px"><div class="muted" style="text-align:center;font-size:11px">paylaşımlı görsel</div>';}
+}
 async function listGeminiModels(){
   const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models?key="+encodeURIComponent(S.apiKey.trim()));
   const data=await res.json();
@@ -2636,6 +2679,7 @@ function renderDeckArea(){
           <div id="vfb"></div></div>
       </div>
     </div>`;
+  if(!cimg)loadSharedImg(vid,w.en); // yerelde yoksa paylaşımlı depodan getir → başkalarının ürettiği görsel gelsin
 }
 /* Kelime · AI yardımcıları */
 async function vAiExamples(en,lvl){
@@ -2677,9 +2721,11 @@ async function vAiImage(){
   if(out)out.innerHTML='<div class="ai-hint"><span class="spin"></span>Görsel üretiliyor… (birkaç saniye sürebilir)</div>';
   const prompt="A simple, clear, memorable educational flashcard illustration that visually represents the meaning of the English word '"+w.en+"' (Turkish meaning: "+w.tr+"). Friendly, colorful, minimal, single subject centered, plain light background, NO text or letters in the image.";
   try{
-    const url=await geminiImage(prompt);
-    wimgSet(vid,url);
-    if(curWord()&&curWord().en===w.en){const o=document.getElementById('vimg');if(o)o.innerHTML='<img src="'+url+'" alt="'+esc(w.en)+'" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px">';}
+    const raw=await geminiImage(prompt);
+    let small=raw;try{small=await downscaleImg(raw,256,0.82);}catch(e){}
+    wimgSet(vid,small);
+    const shared=await sharedImgPut(vid,small); // paylaşımlı depoya (giriş yapılmışsa) → herkes görür
+    if(curWord()&&curWord().en===w.en){const o=document.getElementById('vimg');if(o)o.innerHTML='<img src="'+small+'" alt="'+esc(w.en)+'" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px">'+(shared?'<div class="muted" style="text-align:center;font-size:11px">✓ paylaşımlı olarak kaydedildi</div>':'');}
   }catch(e){const o=document.getElementById('vimg');if(o)o.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
 }
 function flip(){flipped=!flipped;document.querySelector("#deckArea .flash").classList.toggle("flipped");}
