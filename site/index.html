@@ -2664,6 +2664,7 @@ function renderDeckArea(){
   const vid=wKey(curTopic,w.en);
   const cimg=WIMG[vid];
   const cstrat=(S.wordAI&&S.wordAI[vid]&&S.wordAI[vid].strategy)||"";
+  const cEmoji=(S.wordAI&&S.wordAI[vid]&&S.wordAI[vid].emoji)||"";
   area.innerHTML=`
     <div class="deck-progress">Kart ${cardIdx+1} / ${words.length} · bu listede ${known} kelime biliniyor</div>
     <div class="bar green" style="margin-bottom:14px"><i style="width:${Math.round(known/words.length*100)}%"></i></div>
@@ -2680,10 +2681,10 @@ function renderDeckArea(){
     </div>
     <div class="card" style="margin:14px 0 0;box-shadow:none;border-style:dashed">
       <div class="gsec"><h4>🎨 Görsel + 🧠 Öğrenme Stratejisi</h4>
-        <div id="vimg"><img src="${cimg||pollImgUrl(w.en,w.tr,vid)}" alt="${esc(w.en)}" onerror="vImgErr(this)" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px;background:var(--surface)"></div>
+        <div id="vimg">${cEmoji?emojiHtml(cEmoji):'<div class="ai-hint" style="text-align:center;padding:20px 0">🎨 görsel hazırlanıyor…</div>'}</div>
         <div id="vstrat">${cstrat?'<div class="ai-out box" style="white-space:pre-wrap">'+esc(cstrat)+'</div>':'<div class="ai-hint">Bu kelimeye özel bir <b>öğrenme stratejisi</b> (mnemonic, çağrışım, canlandırma) üretebilirsin.</div>'}</div>
         <div class="ai-row" style="margin-top:8px">
-          <button class="btn ghost" onclick="vImgRefresh()">🔄 Farklı görsel</button>
+          <button class="btn ghost" onclick="emojiRefresh()">🔄 Farklı görsel</button>
           <button class="btn amber" onclick="vAiStrategy()">🧠 Strateji üret</button>
         </div>
       </div>
@@ -2698,6 +2699,7 @@ function renderDeckArea(){
           <div id="vfb"></div></div>
       </div>
     </div>`;
+  if(!cEmoji&&hasKey())autoEmoji(vid,w.en,w.tr); // görsel yoksa otomatik üret (metin AI'siyle, her yerde çalışır)
 }
 /* Kelime · AI yardımcıları */
 async function vAiExamples(en,lvl){
@@ -2732,22 +2734,21 @@ async function vAiStrategy(){
     if(curWord()&&curWord().en===w.en){const o=document.getElementById('vstrat');if(o)o.innerHTML='<div class="ai-out box" style="white-space:pre-wrap">'+esc(r)+'</div>';}
   }catch(e){const o=document.getElementById('vstrat');if(o)o.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
 }
-function numHash(s){let h=0;s=String(s);for(let i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0;}return Math.abs(h)%100000;}
-function pollImgUrl(en,tr,vid){
-  const p="educational flashcard illustration of the English word "+en+" meaning "+tr+", simple colorful minimal cartoon, single subject centered, plain light background, no text";
-  return "https://image.pollinations.ai/prompt/"+encodeURIComponent(p)+"?width=384&height=384&seed="+numHash(vid)+"&model=flux&nologo=true";
+/* Emoji görsel — metin AI'siyle (her yerde çalışır), kalıcı cache */
+function emojiHtml(e){return '<div style="font-size:88px;line-height:1.1;text-align:center;padding:16px 0;background:var(--surface);border:1px solid var(--line);border-radius:14px">'+e+'</div>';}
+const _emojiBusy={};
+async function autoEmoji(vid,en,tr){
+  if(_emojiBusy[vid])return;_emojiBusy[vid]=1;
+  const o=document.getElementById('vimg');if(o&&!o.querySelector('div[style*="font-size:88px"]'))o.innerHTML='<div class="ai-hint" style="text-align:center;padding:16px 0"><span class="spin"></span> görsel hazırlanıyor…</div>';
+  try{
+    const r=await gemini("'"+en+"' ("+tr+") kelimesini en iyi temsil eden 1-3 emoji seç. SADECE emojileri yaz, başka hiçbir şey yazma.",SYS_TUTOR);
+    const em=(r.match(/\p{Extended_Pictographic}/gu)||[]).slice(0,3).join('')||'🧠';
+    S.wordAI=S.wordAI||{};S.wordAI[vid]=Object.assign({},S.wordAI[vid],{emoji:em});save();
+    if(curWord()&&wKey(curTopic,curWord().en)===vid){const x=document.getElementById('vimg');if(x)x.innerHTML=emojiHtml(em);}
+  }catch(e){if(curWord()&&wKey(curTopic,curWord().en)===vid){const x=document.getElementById('vimg');if(x)x.innerHTML='<div class="ai-hint" style="text-align:center;padding:16px 0">🖼️ görsel şu an alınamadı</div>';}}
+  finally{delete _emojiBusy[vid];}
 }
-function vImgErr(img){try{img.style.display='none';}catch(e){}const o=document.getElementById('vimg');if(o)o.innerHTML='<div class="ai-hint">Görsel yüklenemedi (servis yoğun olabilir). <a href="javascript:void(0)" onclick="vImgRefresh()" style="color:var(--amber);font-weight:700">🔄 tekrar dene</a></div>';}
-function vImgRefresh(){
-  const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);
-  const p="educational flashcard illustration of the English word "+w.en+" meaning "+w.tr+", simple colorful minimal cartoon, single subject centered, plain light background, no text";
-  const url="https://image.pollinations.ai/prompt/"+encodeURIComponent(p)+"?width=384&height=384&seed="+Math.floor(Math.random()*100000)+"&model=flux&nologo=true";
-  const o=document.getElementById('vimg');if(o)o.innerHTML='<div class="ai-hint"><span class="spin"></span>Yeni görsel hazırlanıyor…</div>';
-  const im=new Image();
-  im.onload=function(){wimgSet(vid,url);if(curWord()&&wKey(curTopic,curWord().en)===vid){const x=document.getElementById('vimg');if(x)x.innerHTML='<img src="'+url+'" alt="'+esc(w.en)+'" onerror="vImgErr(this)" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px;background:var(--surface)">';}};
-  im.onerror=function(){const x=document.getElementById('vimg');if(x)x.innerHTML='<div class="ai-fb bad">⚠️ Görsel servisi yanıt vermedi. Biraz sonra tekrar dene.</div>';};
-  im.src=url;
-}
+function emojiRefresh(){const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);if(S.wordAI&&S.wordAI[vid])delete S.wordAI[vid].emoji;delete _emojiBusy[vid];const o=document.getElementById('vimg');if(o)o.innerHTML='';autoEmoji(vid,w.en,w.tr);}
 async function vAiImage(){
   const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);
   const out=document.getElementById('vimg');
