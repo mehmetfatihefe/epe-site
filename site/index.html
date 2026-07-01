@@ -2679,11 +2679,11 @@ function renderDeckArea(){
       <button class="btn dark" onclick="nextCard(event)" ${cardIdx===words.length-1?'disabled':''}>Sonraki →</button>
     </div>
     <div class="card" style="margin:14px 0 0;box-shadow:none;border-style:dashed">
-      <div class="gsec"><h4>🎨 AI Görsel + 🧠 Öğrenme Stratejisi</h4>
-        <div id="vimg">${cimg?'<img src="'+cimg+'" alt="'+esc(w.en)+'" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px">':''}</div>
-        <div id="vstrat">${cstrat?'<div class="ai-out box" style="white-space:pre-wrap">'+esc(cstrat)+'</div>':'<div class="ai-hint">Bu kelimeye özel: AI hatırlatıcı bir <b>görsel</b> ve sana özel bir <b>öğrenme stratejisi</b> (mnemonic, çağrışım, canlandırma) üretebilir.</div>'}</div>
+      <div class="gsec"><h4>🎨 Görsel + 🧠 Öğrenme Stratejisi</h4>
+        <div id="vimg"><img src="${cimg||pollImgUrl(w.en,w.tr,vid)}" alt="${esc(w.en)}" onerror="vImgErr(this)" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px;background:var(--surface)"></div>
+        <div id="vstrat">${cstrat?'<div class="ai-out box" style="white-space:pre-wrap">'+esc(cstrat)+'</div>':'<div class="ai-hint">Bu kelimeye özel bir <b>öğrenme stratejisi</b> (mnemonic, çağrışım, canlandırma) üretebilirsin.</div>'}</div>
         <div class="ai-row" style="margin-top:8px">
-          <button class="btn green" onclick="vAiImage()">🎨 Görsel üret</button>
+          <button class="btn ghost" onclick="vImgRefresh()">🔄 Farklı görsel</button>
           <button class="btn amber" onclick="vAiStrategy()">🧠 Strateji üret</button>
         </div>
       </div>
@@ -2698,7 +2698,6 @@ function renderDeckArea(){
           <div id="vfb"></div></div>
       </div>
     </div>`;
-  if(!cimg)loadSharedImg(vid,w.en); // yerelde yoksa paylaşımlı depodan getir → başkalarının ürettiği görsel gelsin
 }
 /* Kelime · AI yardımcıları */
 async function vAiExamples(en,lvl){
@@ -2737,6 +2736,17 @@ function numHash(s){let h=0;s=String(s);for(let i=0;i<s.length;i++){h=(h*31+s.ch
 function pollImgUrl(en,tr,vid){
   const p="educational flashcard illustration of the English word "+en+" meaning "+tr+", simple colorful minimal cartoon, single subject centered, plain light background, no text";
   return "https://image.pollinations.ai/prompt/"+encodeURIComponent(p)+"?width=384&height=384&seed="+numHash(vid)+"&model=flux&nologo=true";
+}
+function vImgErr(img){try{img.style.display='none';}catch(e){}const o=document.getElementById('vimg');if(o)o.innerHTML='<div class="ai-hint">Görsel yüklenemedi (servis yoğun olabilir). <a href="javascript:void(0)" onclick="vImgRefresh()" style="color:var(--amber);font-weight:700">🔄 tekrar dene</a></div>';}
+function vImgRefresh(){
+  const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);
+  const p="educational flashcard illustration of the English word "+w.en+" meaning "+w.tr+", simple colorful minimal cartoon, single subject centered, plain light background, no text";
+  const url="https://image.pollinations.ai/prompt/"+encodeURIComponent(p)+"?width=384&height=384&seed="+Math.floor(Math.random()*100000)+"&model=flux&nologo=true";
+  const o=document.getElementById('vimg');if(o)o.innerHTML='<div class="ai-hint"><span class="spin"></span>Yeni görsel hazırlanıyor…</div>';
+  const im=new Image();
+  im.onload=function(){wimgSet(vid,url);if(curWord()&&wKey(curTopic,curWord().en)===vid){const x=document.getElementById('vimg');if(x)x.innerHTML='<img src="'+url+'" alt="'+esc(w.en)+'" onerror="vImgErr(this)" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px;background:var(--surface)">';}};
+  im.onerror=function(){const x=document.getElementById('vimg');if(x)x.innerHTML='<div class="ai-fb bad">⚠️ Görsel servisi yanıt vermedi. Biraz sonra tekrar dene.</div>';};
+  im.src=url;
 }
 async function vAiImage(){
   const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);
