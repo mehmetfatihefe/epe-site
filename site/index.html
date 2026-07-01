@@ -1973,7 +1973,7 @@ async function callGemini(contents,system){
 async function gemini(prompt,system){return callGemini([{role:"user",parts:[{text:prompt}]}],system);}
 async function geminiChat(history,system){return callGemini(history.map(m=>({role:m.role==="bot"?"model":"user",parts:[{text:m.text}]})),system);}
 /* Görsel üretimi — Gemini image modelleri (inlineData base64 döner) */
-const IMG_MODELS=["gemini-2.0-flash-preview-image-generation","gemini-2.5-flash-image-preview","gemini-2.0-flash-exp-image-generation"];
+const IMG_MODELS=["gemini-2.5-flash-image","gemini-3.1-flash-image-preview","gemini-2.5-flash-image-preview","gemini-2.0-flash-preview-image-generation"];
 async function geminiImage(prompt){
   if(!hasKey())throw new Error("API anahtarı yok. ⚙️ AI Ayarı'ndan Gemini anahtarını gir.");
   const personal=usePersonalKey();
