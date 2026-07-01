@@ -1630,7 +1630,7 @@ const GDET={
 const KEY="epe_state_v1";
 let S=load();
 applyExam(S.examType||"epe");
-function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[],vsrs:o.vsrs||{},journal:o.journal||{},examType:o.examType||null}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[],vsrs:{},journal:{},examType:null}}}
+function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[],vsrs:o.vsrs||{},journal:o.journal||{},examType:o.examType||null,_owner:o._owner||null,_updatedAt:o._updatedAt||0}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[],vsrs:{},journal:{},examType:null,_owner:null,_updatedAt:0}}}
 function save(){S._updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(S));schedulePush();}
 
 /* ============================== BULUT SENKRON (Supabase + e-posta/şifre girişi) ============================== */
@@ -1715,14 +1715,38 @@ async function syncOnStart(){
   setSyncStatus("yükleniyor…");
   await refreshSession();
   if(!loggedIn()){setSyncStatus("giriş yap →");renderSyncPanel();return;}
+  const uid=session.user_id;
   const remote=await cloudPull();
   if(remote){
-    const localT=S._updatedAt||0, remoteT=remote._updatedAt||0;
-    if(remoteT>=localT){localStorage.setItem(KEY,JSON.stringify(remote));S=load();refreshActive();setSyncStatus("senkron ✓");}
-    else{cloudPush();}
+    // Bu kullanıcının bulut verisi var → benimse. Yerel yalnızca AYNI kullanıcıya aitse ve daha yeniyse korunur.
+    const sameOwner=(S._owner===uid);
+    const localT=sameOwner?(S._updatedAt||0):-1, remoteT=remote._updatedAt||0;
+    if(remoteT>=localT){
+      localStorage.setItem(KEY,JSON.stringify(remote));S=load();S._owner=uid;localStorage.setItem(KEY,JSON.stringify(S));
+      applyExam(S.examType||"epe");updateExamHeader();refreshActive();renderDash();
+      if(!S.examType)showExamPicker();
+      setSyncStatus("senkron ✓");
+    }else{S._owner=uid;save();setSyncStatus("senkron ✓");}
   }else{
-    cloudPush(); // bulutta henüz veri yok → mevcut ilerlemeyi yükle
+    // Bulutta veri YOK.
+    if(S._owner===uid){
+      cloudPush(); // aynı kullanıcının bu cihazdaki ilk yüklemesi → mevcut ilerlemeyi buluta yaz
+    }else{
+      // Farklı/yeni kullanıcı → önceki kullanıcının yerel verisini DEVRALMA, sıfırdan başla.
+      localStorage.removeItem(KEY);S=load();S._owner=uid;S._updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(S));
+      applyExam("epe");updateExamHeader();refreshActive();renderDash();showExamPicker();
+      cloudPush();setSyncStatus("senkron ✓");
+    }
   }
+}
+async function resetMyData(){
+  if(!confirm("Bu hesabın TÜM ilerlemesi (bu cihazda ve bulutta) silinip sıfırdan başlanacak. Emin misin?"))return;
+  const uid=loggedIn()?session.user_id:null;
+  localStorage.removeItem(KEY);S=load();if(uid)S._owner=uid;S._updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(S));
+  applyExam("epe");updateExamHeader();
+  if(typeof syncReady==="function"&&syncReady()){try{await cloudPush();}catch(e){}}
+  refreshActive();renderDash();showExamPicker();
+  try{setSyncStatus("sıfırlandı ✓");}catch(e){}
 }
 function refreshActive(){
   const sec=document.querySelector("section.active");
@@ -1823,7 +1847,8 @@ function renderSyncPanel(){
   } else {
     html+='<div style="font-size:13px;margin-bottom:10px">Giriş yapıldı:<br><b>'+(session.email||"")+'</b></div>'+
       '<div id="syncMsg" style="font-size:12px;min-height:16px;margin-bottom:8px"></div>'+
-      '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost" onclick="toggleSyncPanel(false)">Kapat</button><button class="btn dark" onclick="uiSignOut()">Çıkış yap</button></div>';
+      '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost" onclick="toggleSyncPanel(false)">Kapat</button><button class="btn dark" onclick="uiSignOut()">Çıkış yap</button></div>'+
+      '<div style="text-align:right;margin-top:8px"><a href="javascript:void(0)" onclick="resetMyData()" class="muted" style="font-size:11px;color:var(--red)">bu hesabın verilerini sıfırla</a></div>';
   }
   p.innerHTML=html;
 }
