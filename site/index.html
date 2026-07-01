@@ -1630,7 +1630,7 @@ const GDET={
 const KEY="epe_state_v1";
 let S=load();
 applyExam(S.examType||"epe");
-function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[],vsrs:o.vsrs||{},journal:o.journal||{},examType:o.examType||null,_owner:o._owner||null,_updatedAt:o._updatedAt||0}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[],vsrs:{},journal:{},examType:null,_owner:null,_updatedAt:0}}}
+function load(){try{const o=JSON.parse(localStorage.getItem(KEY))||{};return{tasks:o.tasks||{},known:o.known||{},scores:o.scores||{},gram:o.gram||{},gtest:o.gtest||{},read:o.read||{},coach:o.coach||{profile:"",history:[]},xp:o.xp||0,streak:o.streak||{n:0,last:0},lessonBest:o.lessonBest||{},apiKey:o.apiKey||"",apiModel:o.apiModel||"gemini-2.0-flash",flexMode:o.flexMode||false,srs:o.srs||{},mistakes:o.mistakes||[],vsrs:o.vsrs||{},journal:o.journal||{},examType:o.examType||null,wordAI:o.wordAI||{},_owner:o._owner||null,_updatedAt:o._updatedAt||0}}catch(e){return{tasks:{},known:{},scores:{},gram:{},gtest:{},read:{},coach:{profile:"",history:[]},xp:0,streak:{n:0,last:0},lessonBest:{},apiKey:"",apiModel:"gemini-2.0-flash",flexMode:false,srs:{},mistakes:[],vsrs:{},journal:{},examType:null,wordAI:{},_owner:null,_updatedAt:0}}}
 function save(){S._updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(S));schedulePush();}
 
 /* ============================== BULUT SENKRON (Supabase + e-posta/şifre girişi) ============================== */
@@ -1972,6 +1972,35 @@ async function callGemini(contents,system){
 }
 async function gemini(prompt,system){return callGemini([{role:"user",parts:[{text:prompt}]}],system);}
 async function geminiChat(history,system){return callGemini(history.map(m=>({role:m.role==="bot"?"model":"user",parts:[{text:m.text}]})),system);}
+/* Görsel üretimi — Gemini image modelleri (inlineData base64 döner) */
+const IMG_MODELS=["gemini-2.0-flash-preview-image-generation","gemini-2.5-flash-image-preview","gemini-2.0-flash-exp-image-generation"];
+async function geminiImage(prompt){
+  if(!hasKey())throw new Error("API anahtarı yok. ⚙️ AI Ayarı'ndan Gemini anahtarını gir.");
+  const personal=usePersonalKey();
+  const body={contents:[{parts:[{text:prompt}]}],generationConfig:{responseModalities:["TEXT","IMAGE"]}};
+  let lastErr;
+  for(const model of IMG_MODELS){
+    try{
+      let res;
+      if(personal){
+        res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(S.apiKey.trim()),
+          {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      }else{
+        res=await fetch(AI_PROXY,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:model,payload:body})});
+      }
+      let data;try{data=await res.json();}catch(e){lastErr=new Error("Yanıt okunamadı (HTTP "+res.status+").");continue;}
+      if(data.error){const msg=data.error.message||("HTTP "+res.status);if(/API key not valid|API_KEY_INVALID/i.test(msg))throw new Error("API anahtarı geçersiz.");lastErr=new Error(msg);continue;}
+      const parts=(data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts)||[];
+      const img=parts.find(p=>p.inlineData&&p.inlineData.data);
+      if(img)return "data:"+(img.inlineData.mimeType||"image/png")+";base64,"+img.inlineData.data;
+      lastErr=new Error("Bu model görsel döndürmedi");
+    }catch(e){lastErr=e;}
+  }
+  throw new Error((lastErr&&lastErr.message)||"Görsel üretilemedi. Hesabın görsel üretimini desteklemiyor olabilir; ⚙️ AI Ayarı'ndan kendi anahtarını deneyebilirsin.");
+}
+/* Kelime görseli önbelleği (S'ye girmez → sync şişmez; oturum + kotayla localStorage) */
+const WIMG=(function(){try{return JSON.parse(localStorage.getItem("epe_wimg")||"{}");}catch(e){return {};}})();
+function wimgSet(vid,url){WIMG[vid]=url;const keys=Object.keys(WIMG);if(keys.length>12){delete WIMG[keys[0]];}try{localStorage.setItem("epe_wimg",JSON.stringify(WIMG));}catch(e){/* kota dolduysa sessiz geç */}}
 async function listGeminiModels(){
   const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models?key="+encodeURIComponent(S.apiKey.trim()));
   const data=await res.json();
@@ -2570,6 +2599,9 @@ function renderDeckArea(){
   const known=words.filter(x=>S.known[wKey(curTopic,x.en)]).length;
   const isKnown=!!S.known[wKey(curTopic,w.en)];
   const ex=EXAMPLES[w.en];
+  const vid=wKey(curTopic,w.en);
+  const cimg=WIMG[vid];
+  const cstrat=(S.wordAI&&S.wordAI[vid]&&S.wordAI[vid].strategy)||"";
   area.innerHTML=`
     <div class="deck-progress">Kart ${cardIdx+1} / ${words.length} · bu listede ${known} kelime biliniyor</div>
     <div class="bar green" style="margin-bottom:14px"><i style="width:${Math.round(known/words.length*100)}%"></i></div>
@@ -2585,6 +2617,14 @@ function renderDeckArea(){
       <button class="btn dark" onclick="nextCard(event)" ${cardIdx===words.length-1?'disabled':''}>Sonraki →</button>
     </div>
     <div class="card" style="margin:14px 0 0;box-shadow:none;border-style:dashed">
+      <div class="gsec"><h4>🎨 AI Görsel + 🧠 Öğrenme Stratejisi</h4>
+        <div id="vimg">${cimg?'<img src="'+cimg+'" alt="'+esc(w.en)+'" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px">':''}</div>
+        <div id="vstrat">${cstrat?'<div class="ai-out box" style="white-space:pre-wrap">'+esc(cstrat)+'</div>':'<div class="ai-hint">Bu kelimeye özel: AI hatırlatıcı bir <b>görsel</b> ve sana özel bir <b>öğrenme stratejisi</b> (mnemonic, çağrışım, canlandırma) üretebilir.</div>'}</div>
+        <div class="ai-row" style="margin-top:8px">
+          <button class="btn green" onclick="vAiImage()">🎨 Görsel üret</button>
+          <button class="btn amber" onclick="vAiStrategy()">🧠 Strateji üret</button>
+        </div>
+      </div>
       <div class="gsec"><h4>Örnek Cümleler</h4>
         <div id="vex">${ex?`<div class="gex-row"><div class="gex">${esc(ex)}</div><button class="tts" data-say="${esc(ex)}" onclick="speak(this.dataset.say)" title="Sesli oku">🔊</button></div>`:'<div class="ai-hint">Bu kelime için AI’dan örnek cümleler isteyebilirsin.</div>'}</div>
         <div class="ai-row"><button class="btn ghost" onclick="vAiExamples('${esc(w.en)}','${w.lvl}')">🤖 AI'dan örnek cümle iste</button></div>
@@ -2616,6 +2656,31 @@ async function vAiCheck(en){
     const r=await gemini("Bir öğrenci '"+en+"' kelimesini kullanarak şu cümleyi yazdı: \""+s+"\". Şunları yap: 1) Cümle dilbilgisi/anlam açısından doğru mu ve kelime doğru kullanılmış mı, kısaca belirt. 2) Hata varsa düzeltilmiş halini ver. 3) Tek cümlelik cesaretlendirici geri bildirim. Türkçe açıkla, kısa tut.",brainSys());
     fb.innerHTML='<div class="ai-fb neutral">'+esc(r)+'</div>';
   }catch(e){fb.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
+}
+function curWord(){const ws=filteredWords();return ws[cardIdx];}
+async function vAiStrategy(){
+  const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);
+  const out=document.getElementById('vstrat');
+  if(!hasKey()){if(out)out.innerHTML=aiOffBox();return;}
+  if(out)out.innerHTML='<div class="ai-hint"><span class="spin"></span>Sana özel öğrenme stratejisi hazırlanıyor…</div>';
+  const prompt="'"+w.en+"' ("+w.tr+", "+w.lvl+") İngilizce kelimesini KALICI öğrenmem için BANA ÖZEL bir strateji hazırla. Kısa, Türkçe, madde madde:\n1) Hatırlama kancası: kelimeyi Türkçe bir ses benzerliği/çağrışım ya da kökeniyle bağla (mnemonic).\n2) Zihinde canlandır: kelimeyi anlatan tek, çarpıcı bir görsel sahne betimle.\n3) Kullanım: 1 örnek İngilizce cümle + Türkçesi.\n4) Pekiştirme ipucu ve sık karıştırılabilecek noktalar.\nMarkdown başlık kullanma.";
+  try{
+    const r=await gemini(prompt,brainSys());
+    S.wordAI=S.wordAI||{};S.wordAI[vid]=Object.assign({},S.wordAI[vid],{strategy:r});save();
+    if(curWord()&&curWord().en===w.en){const o=document.getElementById('vstrat');if(o)o.innerHTML='<div class="ai-out box" style="white-space:pre-wrap">'+esc(r)+'</div>';}
+  }catch(e){const o=document.getElementById('vstrat');if(o)o.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
+}
+async function vAiImage(){
+  const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);
+  const out=document.getElementById('vimg');
+  if(!hasKey()){if(out)out.innerHTML=aiOffBox();return;}
+  if(out)out.innerHTML='<div class="ai-hint"><span class="spin"></span>Görsel üretiliyor… (birkaç saniye sürebilir)</div>';
+  const prompt="A simple, clear, memorable educational flashcard illustration that visually represents the meaning of the English word '"+w.en+"' (Turkish meaning: "+w.tr+"). Friendly, colorful, minimal, single subject centered, plain light background, NO text or letters in the image.";
+  try{
+    const url=await geminiImage(prompt);
+    wimgSet(vid,url);
+    if(curWord()&&curWord().en===w.en){const o=document.getElementById('vimg');if(o)o.innerHTML='<img src="'+url+'" alt="'+esc(w.en)+'" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px">';}
+  }catch(e){const o=document.getElementById('vimg');if(o)o.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
 }
 function flip(){flipped=!flipped;document.querySelector("#deckArea .flash").classList.toggle("flipped");}
 function nextCard(e){e&&e.stopPropagation();const n=filteredWords().length;if(cardIdx<n-1){cardIdx++;flipped=false;renderDeckArea();}}
