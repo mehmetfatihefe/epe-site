@@ -50,13 +50,21 @@ export async function onRequest(context) {
   let scene = null;
   try { scene = await sceneFromGemini(env, w, t); } catch (e) {}
   const subject = scene || (t ? (t + ", " + w) : w);
-  const prompt = subject + ". Cute simple flat vector illustration, single centered subject, soft pastel colors, plain white background, sticker style. No text, no words, no letters, no captions.";
+  const prompt = subject + ". Clean modern flat vector illustration, clear composition, distinct well-separated subjects with correct anatomy, soft colors, plain white background. No text, no words, no letters, no captions.";
 
   const enc = encodeURIComponent(prompt);
+  const qs = "width=512&height=512&seed=" + seed;
   const key = env.POLLINATIONS_KEY;
   const candidates = [];
-  if (key) candidates.push("https://gen.pollinations.ai/image/" + enc + "?width=384&height=384&seed=" + seed + "&model=flux&key=" + encodeURIComponent(key));
-  candidates.push("https://image.pollinations.ai/prompt/" + enc + "?width=384&height=384&seed=" + seed + "&model=flux&nologo=true");
+  if (key) {
+    // güçlü modeller (anahtarlı): nanobanana en iyisi; erişilemezse sıradaki denenir
+    const models = (env.POLLINATIONS_MODEL || "nanobanana,seedream,gptimage,flux").split(",");
+    for (let i = 0; i < models.length; i++) {
+      candidates.push("https://gen.pollinations.ai/image/" + enc + "?" + qs + "&model=" + models[i].trim() + "&key=" + encodeURIComponent(key));
+    }
+  }
+  // anahtarsız yedek (flux)
+  candidates.push("https://image.pollinations.ai/prompt/" + enc + "?" + qs + "&model=flux&nologo=true");
 
   for (const c of candidates) {
     try {
