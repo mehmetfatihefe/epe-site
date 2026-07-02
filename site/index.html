@@ -2682,7 +2682,7 @@ function renderDeckArea(){
     </div>
     <div class="card" style="margin:14px 0 0;box-shadow:none;border-style:dashed">
       <div class="gsec"><h4>🎨 Görsel + 🧠 Öğrenme Stratejisi</h4>
-        <div id="vimg">${cImg?imgHtmlTag(cImg,w.en):(cEmoji?emojiHtml(cEmoji):'<div class="ai-hint" style="text-align:center;padding:20px 0">🎨 görsel hazırlanıyor…</div>')}</div>
+        <div id="vimg">${cEmoji?emojiHtml(cEmoji):'<div class="ai-hint" style="text-align:center;padding:20px 0">🎨 görsel hazırlanıyor…</div>'}</div>
         <div id="vstrat">${cstrat?'<div class="ai-out box" style="white-space:pre-wrap">'+esc(cstrat)+'</div>':'<div class="ai-hint">Bu kelimeye özel bir <b>öğrenme stratejisi</b> (mnemonic, çağrışım, canlandırma) üretebilirsin.</div>'}</div>
         <div class="ai-row" style="margin-top:8px">
           <button class="btn ghost" onclick="emojiRefresh()">🔄 Farklı görsel</button>
@@ -2751,11 +2751,11 @@ async function autoEmoji(vid,en,tr){
 }
 function emojiRefresh(){
   const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);
-  if(S.wordAI&&S.wordAI[vid]){delete S.wordAI[vid].emoji;delete S.wordAI[vid].img;delete S.wordAI[vid].noimg;}
+  if(S.wordAI&&S.wordAI[vid]){delete S.wordAI[vid].emoji;delete S.wordAI[vid].wimg;delete S.wordAI[vid].noimg;}
   delete _emojiBusy[vid];delete _visBusy[vid];save();
-  const o=document.getElementById('vimg');if(o)o.innerHTML='<div class="ai-hint" style="text-align:center;padding:16px 0"><span class="spin"></span> yeni görsel…</div>';
-  const gen="/api/img?w="+encodeURIComponent(w.en)+(w.tr?("&t="+encodeURIComponent(w.tr)):"")+"&s="+Math.floor(Math.random()*100000);
-  loadable(gen).then(function(ok){ if(ok){setVisCache(vid,gen);showVis(vid,imgHtmlTag(gen,w.en));} else ensureVisual(vid,w.en,w.tr); });
+  const o=document.getElementById('vimg');if(o)o.innerHTML='<div class="ai-hint" style="text-align:center;padding:16px 0"><span class="spin"></span> yeni görsel hazırlanıyor…</div>';
+  const gen=genImgUrl(w.en,w.tr,"&s="+Math.floor(Math.random()*100000));
+  loadable(gen).then(function(ok){ if(ok){showVis(vid,imgHtmlTag(gen,w.en));} else ensureVisual(vid,w.en,w.tr); });
 }
 /* Gerçek görsel — Wikipedia görsel API'si (keyless, CORS açık, Türkiye'de çalışır) */
 function imgHtmlTag(url,en){return '<img src="'+url+'" alt="'+esc(en)+'" loading="lazy" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px;background:var(--surface)">';}
@@ -2770,18 +2770,18 @@ async function wikiImage(term){
   }catch(e){return null;}
 }
 const _visBusy={};
+const IMGV="2"; // görsel sürümü — artınca eski önbellek baypas edilir
 function loadable(url){return new Promise(function(res){const im=new Image();im.onload=function(){res(true);};im.onerror=function(){res(false);};im.src=url;});}
-function setVisCache(vid,url){S.wordAI=S.wordAI||{};S.wordAI[vid]=Object.assign({},S.wordAI[vid],{img:url});save();}
+function genImgUrl(en,tr,extra){return "/api/img?w="+encodeURIComponent(en)+(tr?("&t="+encodeURIComponent(tr)):"")+"&v="+IMGV+(extra||"");}
 async function ensureVisual(vid,en,tr){
   const rec=(S.wordAI&&S.wordAI[vid])||{};
-  if(rec.img){showVis(vid,imgHtmlTag(rec.img,en));return;}
+  if(rec.wimg){showVis(vid,imgHtmlTag(rec.wimg,en));return;} // kullanıcı bilerek foto/emoji seçtiyse
   if(_visBusy[vid])return;_visBusy[vid]=1;
-  // 1) AI-üretimi gerçek görsel (edge fonksiyonu, Türkiye kısıtını aşar)
-  const gen="/api/img?w="+encodeURIComponent(en)+(tr?("&t="+encodeURIComponent(tr)):"");
-  if(await loadable(gen)){setVisCache(vid,gen);showVis(vid,imgHtmlTag(gen,en));delete _visBusy[vid];return;}
+  // 1) AI-üretimi gerçek görsel (edge fonksiyonu, kelimeyi anlatan sahne)
+  if(await loadable(genImgUrl(en,tr))){showVis(vid,imgHtmlTag(genImgUrl(en,tr),en));delete _visBusy[vid];return;}
   // 2) Wikipedia gerçek fotoğrafı
   let wik=null;try{wik=await wikiImage(en);}catch(e){}
-  if(wik){setVisCache(vid,wik);showVis(vid,imgHtmlTag(wik,en));delete _visBusy[vid];return;}
+  if(wik){S.wordAI=S.wordAI||{};S.wordAI[vid]=Object.assign({},S.wordAI[vid],{wimg:wik});save();showVis(vid,imgHtmlTag(wik,en));delete _visBusy[vid];return;}
   // 3) emoji (son çare)
   delete _visBusy[vid];
   const em=S.wordAI[vid]&&S.wordAI[vid].emoji;
