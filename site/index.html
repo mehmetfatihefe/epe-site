@@ -2665,6 +2665,7 @@ function renderDeckArea(){
   const cimg=WIMG[vid];
   const cstrat=(S.wordAI&&S.wordAI[vid]&&S.wordAI[vid].strategy)||"";
   const cEmoji=(S.wordAI&&S.wordAI[vid]&&S.wordAI[vid].emoji)||"";
+  const cImg=(S.wordAI&&S.wordAI[vid]&&S.wordAI[vid].img)||"";
   area.innerHTML=`
     <div class="deck-progress">Kart ${cardIdx+1} / ${words.length} · bu listede ${known} kelime biliniyor</div>
     <div class="bar green" style="margin-bottom:14px"><i style="width:${Math.round(known/words.length*100)}%"></i></div>
@@ -2681,7 +2682,7 @@ function renderDeckArea(){
     </div>
     <div class="card" style="margin:14px 0 0;box-shadow:none;border-style:dashed">
       <div class="gsec"><h4>🎨 Görsel + 🧠 Öğrenme Stratejisi</h4>
-        <div id="vimg">${cEmoji?emojiHtml(cEmoji):'<div class="ai-hint" style="text-align:center;padding:20px 0">🎨 görsel hazırlanıyor…</div>'}</div>
+        <div id="vimg">${cImg?imgHtmlTag(cImg,w.en):(cEmoji?emojiHtml(cEmoji):'<div class="ai-hint" style="text-align:center;padding:20px 0">🎨 görsel hazırlanıyor…</div>')}</div>
         <div id="vstrat">${cstrat?'<div class="ai-out box" style="white-space:pre-wrap">'+esc(cstrat)+'</div>':'<div class="ai-hint">Bu kelimeye özel bir <b>öğrenme stratejisi</b> (mnemonic, çağrışım, canlandırma) üretebilirsin.</div>'}</div>
         <div class="ai-row" style="margin-top:8px">
           <button class="btn ghost" onclick="emojiRefresh()">🔄 Farklı görsel</button>
@@ -2699,7 +2700,7 @@ function renderDeckArea(){
           <div id="vfb"></div></div>
       </div>
     </div>`;
-  if(!cEmoji&&hasKey())autoEmoji(vid,w.en,w.tr); // görsel yoksa otomatik üret (metin AI'siyle, her yerde çalışır)
+  ensureVisual(vid,w.en,w.tr); // önce gerçek görsel (Wikipedia, keyless), yoksa emoji
 }
 /* Kelime · AI yardımcıları */
 async function vAiExamples(en,lvl){
@@ -2748,7 +2749,37 @@ async function autoEmoji(vid,en,tr){
   }catch(e){if(curWord()&&wKey(curTopic,curWord().en)===vid){const x=document.getElementById('vimg');if(x)x.innerHTML='<div class="ai-hint" style="text-align:center;padding:16px 0">🖼️ görsel şu an alınamadı</div>';}}
   finally{delete _emojiBusy[vid];}
 }
-function emojiRefresh(){const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);if(S.wordAI&&S.wordAI[vid])delete S.wordAI[vid].emoji;delete _emojiBusy[vid];const o=document.getElementById('vimg');if(o)o.innerHTML='';autoEmoji(vid,w.en,w.tr);}
+function emojiRefresh(){const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);if(S.wordAI&&S.wordAI[vid]){delete S.wordAI[vid].emoji;delete S.wordAI[vid].img;delete S.wordAI[vid].noimg;}delete _emojiBusy[vid];save();const o=document.getElementById('vimg');if(o)o.innerHTML='';autoEmoji(vid,w.en,w.tr);}
+/* Gerçek görsel — Wikipedia görsel API'si (keyless, CORS açık, Türkiye'de çalışır) */
+function imgHtmlTag(url,en){return '<img src="'+url+'" alt="'+esc(en)+'" loading="lazy" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px;background:var(--surface)">';}
+function showVis(vid,html){if(curWord()&&wKey(curTopic,curWord().en)===vid){const x=document.getElementById('vimg');if(x)x.innerHTML=html;}}
+async function wikiImage(term){
+  try{
+    const u="https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch="+encodeURIComponent(term)+"&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=400&format=json&origin=*";
+    const r=await fetch(u);if(!r.ok)return null;
+    const d=await r.json();const pages=d&&d.query&&d.query.pages;if(!pages)return null;
+    for(const k in pages){if(pages[k].thumbnail&&pages[k].thumbnail.source)return pages[k].thumbnail.source;}
+    return null;
+  }catch(e){return null;}
+}
+const _visBusy={};
+async function ensureVisual(vid,en,tr){
+  const rec=(S.wordAI&&S.wordAI[vid])||{};
+  if(rec.img){showVis(vid,imgHtmlTag(rec.img,en));return;}
+  if(_visBusy[vid])return;_visBusy[vid]=1;
+  let url=null;
+  if(!rec.noimg){try{url=await wikiImage(en);}catch(e){}}
+  if(url){
+    S.wordAI=S.wordAI||{};S.wordAI[vid]=Object.assign({},S.wordAI[vid],{img:url});save();
+    showVis(vid,imgHtmlTag(url,en));delete _visBusy[vid];return;
+  }
+  if(!rec.noimg){S.wordAI=S.wordAI||{};S.wordAI[vid]=Object.assign({},S.wordAI[vid],{noimg:true});save();}
+  delete _visBusy[vid];
+  const em=S.wordAI[vid]&&S.wordAI[vid].emoji;
+  if(em){showVis(vid,emojiHtml(em));}
+  else if(hasKey()){autoEmoji(vid,en,tr);}
+  else{showVis(vid,'<div class="ai-hint" style="text-align:center;padding:16px 0">📖 '+esc(en)+'</div>');}
+}
 async function vAiImage(){
   const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);
   const out=document.getElementById('vimg');
