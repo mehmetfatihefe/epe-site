@@ -2749,7 +2749,14 @@ async function autoEmoji(vid,en,tr){
   }catch(e){if(curWord()&&wKey(curTopic,curWord().en)===vid){const x=document.getElementById('vimg');if(x)x.innerHTML='<div class="ai-hint" style="text-align:center;padding:16px 0">🖼️ görsel şu an alınamadı</div>';}}
   finally{delete _emojiBusy[vid];}
 }
-function emojiRefresh(){const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);if(S.wordAI&&S.wordAI[vid]){delete S.wordAI[vid].emoji;delete S.wordAI[vid].img;delete S.wordAI[vid].noimg;}delete _emojiBusy[vid];save();const o=document.getElementById('vimg');if(o)o.innerHTML='';autoEmoji(vid,w.en,w.tr);}
+function emojiRefresh(){
+  const w=curWord();if(!w)return;const vid=wKey(curTopic,w.en);
+  if(S.wordAI&&S.wordAI[vid]){delete S.wordAI[vid].emoji;delete S.wordAI[vid].img;delete S.wordAI[vid].noimg;}
+  delete _emojiBusy[vid];delete _visBusy[vid];save();
+  const o=document.getElementById('vimg');if(o)o.innerHTML='<div class="ai-hint" style="text-align:center;padding:16px 0"><span class="spin"></span> yeni görsel…</div>';
+  const gen="/api/img?w="+encodeURIComponent(w.en)+(w.tr?("&t="+encodeURIComponent(w.tr)):"")+"&s="+Math.floor(Math.random()*100000);
+  loadable(gen).then(function(ok){ if(ok){setVisCache(vid,gen);showVis(vid,imgHtmlTag(gen,w.en));} else ensureVisual(vid,w.en,w.tr); });
+}
 /* Gerçek görsel — Wikipedia görsel API'si (keyless, CORS açık, Türkiye'de çalışır) */
 function imgHtmlTag(url,en){return '<img src="'+url+'" alt="'+esc(en)+'" loading="lazy" style="width:100%;max-width:320px;border-radius:12px;display:block;margin:0 auto 8px;background:var(--surface)">';}
 function showVis(vid,html){if(curWord()&&wKey(curTopic,curWord().en)===vid){const x=document.getElementById('vimg');if(x)x.innerHTML=html;}}
@@ -2763,17 +2770,19 @@ async function wikiImage(term){
   }catch(e){return null;}
 }
 const _visBusy={};
+function loadable(url){return new Promise(function(res){const im=new Image();im.onload=function(){res(true);};im.onerror=function(){res(false);};im.src=url;});}
+function setVisCache(vid,url){S.wordAI=S.wordAI||{};S.wordAI[vid]=Object.assign({},S.wordAI[vid],{img:url});save();}
 async function ensureVisual(vid,en,tr){
   const rec=(S.wordAI&&S.wordAI[vid])||{};
   if(rec.img){showVis(vid,imgHtmlTag(rec.img,en));return;}
   if(_visBusy[vid])return;_visBusy[vid]=1;
-  let url=null;
-  if(!rec.noimg){try{url=await wikiImage(en);}catch(e){}}
-  if(url){
-    S.wordAI=S.wordAI||{};S.wordAI[vid]=Object.assign({},S.wordAI[vid],{img:url});save();
-    showVis(vid,imgHtmlTag(url,en));delete _visBusy[vid];return;
-  }
-  if(!rec.noimg){S.wordAI=S.wordAI||{};S.wordAI[vid]=Object.assign({},S.wordAI[vid],{noimg:true});save();}
+  // 1) AI-üretimi gerçek görsel (edge fonksiyonu, Türkiye kısıtını aşar)
+  const gen="/api/img?w="+encodeURIComponent(en)+(tr?("&t="+encodeURIComponent(tr)):"");
+  if(await loadable(gen)){setVisCache(vid,gen);showVis(vid,imgHtmlTag(gen,en));delete _visBusy[vid];return;}
+  // 2) Wikipedia gerçek fotoğrafı
+  let wik=null;try{wik=await wikiImage(en);}catch(e){}
+  if(wik){setVisCache(vid,wik);showVis(vid,imgHtmlTag(wik,en));delete _visBusy[vid];return;}
+  // 3) emoji (son çare)
   delete _visBusy[vid];
   const em=S.wordAI[vid]&&S.wordAI[vid].emoji;
   if(em){showVis(vid,emojiHtml(em));}
