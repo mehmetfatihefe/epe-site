@@ -3460,7 +3460,7 @@ function startDueReview(){
   if(!due.length){ if(GRAMMAR.some(g=>S.gram[g.id])){startReview();return;} alert('Henüz tekrar zamanı gelen soru yok. Önce birkaç ders çöz — sonra aralıklı tekrar burada birikir!'); return; }
   const items=[{type:'tip',title:'Günün Tekrarı 🔁',html:'Bugün hatırlama zamanı gelen <b>'+due.length+' soru</b>. Aralıklı tekrar: tam unutmadan tazele — kalıcılığın sırrı tam olarak bu! 💪'}];
   shuffle(due).slice(0,20).forEach(x=>items.push(x));
-  LSN={id:'__due__',review:true,items:items,i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
+  LSN={id:'__due__',review:true,items:items,i:0,t0:Date.now(),correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
   document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
 }
 /* Hata defteri */
@@ -3494,7 +3494,7 @@ function buildMistakeLesson(){
 }
 function startMistakeReview(){
   if(!activeMistakes().length){alert('Hata defterin boş — harika! 🎉');return;}
-  LSN={id:'__mistakes__',review:true,items:buildMistakeLesson(),i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
+  LSN={id:'__mistakes__',review:true,items:buildMistakeLesson(),i:0,t0:Date.now(),correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
   document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
 }
 
@@ -3568,7 +3568,7 @@ function buildReviewLesson(){
 }
 function startReview(){
   if(!GRAMMAR.some(g=>S.gram[g.id])){alert('Önce en az bir modülü bitir; sonra Karışık Tekrar açılır.');return;}
-  LSN={id:'__review__',review:true,items:buildReviewLesson(),i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
+  LSN={id:'__review__',review:true,items:buildReviewLesson(),i:0,t0:Date.now(),correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
   document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
 }
 /* 📖 Konu Kitapçığı: dersi oynamadan tam konu anlatımını oku (tekrar/başvuru için) */
@@ -3601,19 +3601,26 @@ function openGramBook(id){
   ov.innerHTML=h;
 }
 function startGrammarLesson(id){
-  LSN={id:id,items:buildLesson(id),i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
+  LSN={id:id,items:buildLesson(id),i:0,t0:Date.now(),correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
   document.getElementById("lessonOverlay").classList.add("show");
   document.body.style.overflow="hidden";
   renderLesson();
 }
-function closeLesson(refresh){document.getElementById("lessonOverlay").classList.remove("show");document.body.style.overflow="";if(refresh){renderGrammar();renderDash();}}
+function closeLesson(refresh){clearInterval(LSNCLK);document.getElementById("lessonOverlay").classList.remove("show");document.body.style.overflow="";if(refresh){renderGrammar();renderDash();}}
 function quitLesson(){if(confirm("Dersten çıkılsın mı? Bu turun ilerlemesi kaydedilmez."))closeLesson(false);}
-function heartsHTML(){return '❤️'.repeat(Math.max(0,LSN.hearts))+'🤍'.repeat(Math.max(0,5-LSN.hearts));}
+/* Üst gösterge: derste cesaretlendirici skor; tekrar/sınav modunda süre + skor baskısı */
+let LSNCLK=null;
+function lsnClock(){const s=Math.floor((Date.now()-(LSN.t0||Date.now()))/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function startLsnClock(){clearInterval(LSNCLK);LSNCLK=setInterval(function(){const e=document.getElementById('lclk');if(e)e.textContent=lsnClock();},1000);}
+function topStatHTML(){
+  if(LSN.review)return '⏱ <span id="lclk">'+lsnClock()+'</span> · ✅ '+LSN.correct+'/'+LSN.total;
+  return '✅ '+LSN.correct+(LSN.total>LSN.correct?' · 🔁 '+(LSN.total-LSN.correct):'');
+}
 function lFooter(text,disabled){return '<div class="fb" id="fbBox"></div><button class="bigbtn '+(disabled?'gray':'green')+'" id="lbtn" '+(disabled?'disabled':'')+' onclick="lCheck()">'+text+'</button>';}
 function renderLesson(){
   const it=LSN.items[LSN.i];if(!it){return endLesson();}
   const n=LSN.items.length;
-  const head=`<div class="lesson-top"><button class="x" onclick="quitLesson()">✕</button><div class="lprog"><i style="width:${Math.round(LSN.i/n*100)}%"></i></div><div class="hearts">${heartsHTML()}</div></div>`;
+  const head=`<div class="lesson-top"><button class="x" onclick="quitLesson()">✕</button><div class="lprog"><i style="width:${Math.round(LSN.i/n*100)}%"></i></div><div class="hearts">${topStatHTML()}</div></div>`;
   let body='',foot='';
   if(it.type==='notice'){
     body=`<div class="lesson-q"><div style="font-weight:700;color:var(--green);font-size:13px;letter-spacing:1px">🔎 ÖNCE FARK ET</div><h2 style="font-size:19px">${esc(it.q)}</h2>
@@ -3703,6 +3710,7 @@ function renderLesson(){
   if(it.type==='listen')setTimeout(function(){speak(it.answer);},250);
   if(it.type==='match')renderMatch();
   if(it.type==='gap')setTimeout(function(){const g=document.getElementById('gapIn');if(g)g.focus();},100);
+  if(LSN.review)startLsnClock();
 }
 function ctxRender(s){return esc(s).replace(/\[\[(.+?)\]\]/g,'<span class="ctxhl" onclick="ctxReveal()">$1</span>');}
 function ctxReveal(){const t=document.getElementById('ctxTip');if(!t)return;const it=LSN.items[LSN.i];t.innerHTML='<div class="ai-out box" style="margin-top:8px;font-size:13px">💡 '+esc(it.rule||'')+'</div>';t.scrollIntoView({block:'nearest'});}
@@ -3806,12 +3814,11 @@ function lResult(ok,ex){
   const it=LSN.items[LSN.i];var requeued=false;
   if(ok)LSN.correct++;
   else{
-    LSN.hearts=Math.max(0,LSN.hearts-1);
-    // yanlışı kalıcılık için tekrar kuyruğa ekle (doğru yapana dek, en fazla 2 kez)
+    // Ceza yok: yanlış = öğrenme fırsatı. Soru doğru yapılana dek tekrar kuyruğa girer (en fazla 2 kez).
     if(it&&it.type!=='match'){var n=it._rq||0;if(n<2&&LSN.items.length<40){var c=Object.assign({},it);c._rq=n+1;LSN.items.push(c);requeued=true;}}
   }
-  const h=document.querySelector('.hearts');if(h)h.innerHTML=heartsHTML();
-  const fb=document.getElementById('fbBox');if(fb){fb.className='fb show '+(ok?'ok':'no');fb.innerHTML=(ok?'✅ Doğru!':('❌ Yanlış.'+(requeued?' Bu soru birazdan tekrar gelecek.':'')))+(ex?'<br><span style="font-weight:400">'+esc(ex)+'</span>':'');}
+  const h=document.querySelector('.hearts');if(h)h.innerHTML=topStatHTML();
+  const fb=document.getElementById('fbBox');if(fb){fb.className='fb show '+(ok?'ok':'no');fb.innerHTML=(ok?'✅ Doğru!':('❌ Yanlış — sorun değil, böyle öğrenilir.'+(requeued?' Bu soru birazdan tekrar gelecek.':'')))+(ex?'<br><span style="font-weight:400">'+esc(ex)+'</span>':'');}
   const btn=document.getElementById('lbtn');btn.className='bigbtn '+(ok?'green':'red');btn.textContent='Devam →';btn.disabled=false;btn.onclick=lessonNext;
 }
 /* Match */
@@ -3829,25 +3836,32 @@ function mTap(side,i){
       const fb=document.getElementById('fbBox');if(fb){fb.className='fb show ok';fb.innerHTML='✅ Hepsi eşleşti!';}
       const btn=document.getElementById('lbtn');btn.className='bigbtn green';btn.disabled=false;btn.textContent='Devam →';btn.onclick=lessonNext;
     }
-  }else{LSN.total++;LSN.hearts=Math.max(0,LSN.hearts-1);LSN.matchSel=null;drawMatch();const h=document.querySelector('.hearts');if(h)h.innerHTML=heartsHTML();}
+  }else{LSN.total++;LSN.matchSel=null;drawMatch();const h=document.querySelector('.hearts');if(h)h.innerHTML=topStatHTML();}
 }
 function bumpStreak(){const today=stripTime(new Date()).getTime();S.streak=S.streak||{n:0,last:0};if(S.streak.last===today)return;S.streak.n=(today-S.streak.last===86400000)?S.streak.n+1:1;S.streak.last=today;}
 function endLesson(){
+  clearInterval(LSNCLK);
   const review=LSN.review;const id=LSN.id;
   const pct=Math.round(LSN.correct/Math.max(1,LSN.total)*100);const xp=LSN.correct*10;
+  const secs=Math.max(1,Math.round((Date.now()-(LSN.t0||Date.now()))/1000));
+  const perQ=Math.round(secs/Math.max(1,LSN.total));
+  const timeStr=Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0');
   S.xp=(S.xp||0)+xp;bumpStreak();
   if(!review){S.lessonBest=S.lessonBest||{};S.lessonBest[id]=Math.max(S.lessonBest[id]||0,pct);if(pct>=60)S.gram[id]=true;}
   save();
   const title=review?'Karışık Tekrar':((GRAMMAR.find(x=>x.id===id)||{title:'Ders'}).title);
   const again=review?"startReview()":("startGrammarLesson('"+id+"')");
+  // sınav temposu: EPE/YÖKDİL'de soru başına ~60-75 sn düşer
+  const pace=review?(perQ<=45?'⚡ Sınav temposunun üstündesin!':perQ<=75?'✅ Sınav temposundasın.':'🐢 Sınavda soru başına ~75 sn var — tempoyu artıralım.'):'';
   document.getElementById("lessonOverlay").innerHTML=`<div class="lesson-wrap" style="justify-content:center;text-align:center;align-items:center">
     <div style="font-size:66px">${pct>=80?'🏆':pct>=60?'🎉':'💪'}</div>
     <h2 style="font-family:'Baloo 2',sans-serif;margin:.2em 0">${esc(title)}<br>${review?'tekrarı bitti!':(pct>=60?'tamamlandı!':'— biraz daha pratik!')}</h2>
-    <div style="display:flex;gap:12px;margin:18px 0">
+    <div style="display:flex;gap:12px;margin:18px 0;flex-wrap:wrap;justify-content:center">
       <div class="stat"><div class="v" style="color:var(--amber)">+${xp}</div><div class="k">XP</div></div>
       <div class="stat"><div class="v">%${pct}</div><div class="k">doğruluk</div></div>
-      <div class="stat"><div class="v">🔥${S.streak.n}</div><div class="k">gün seri</div></div>
+      ${review?`<div class="stat"><div class="v">⏱ ${timeStr}</div><div class="k">${perQ} sn/soru</div></div>`:`<div class="stat"><div class="v">🔥${S.streak.n}</div><div class="k">gün seri</div></div>`}
     </div>
+    ${pace?`<p class="muted" style="font-size:13px;margin:0 0 6px">${pace}</p>`:''}
     <button class="bigbtn green" style="max-width:300px" onclick="closeLesson(true)">Bitir</button>
     <button class="btn ghost" style="margin-top:12px" onclick="${again}">🔁 Tekrar çöz</button>
   </div>`;
@@ -3937,13 +3951,15 @@ function renderQuizList(){
     }).join("")}
   </div>`;
 }
-let answers={};
+let answers={};let QZCLK=null;
 function openQuiz(id){
-  const q=QUIZZES.find(x=>x.id===id);answers={};
+  const q=QUIZZES.find(x=>x.id===id);answers={};answers._t0=Date.now();
+  clearInterval(QZCLK);
+  QZCLK=setInterval(function(){const e=document.getElementById('qclk');if(!e){clearInterval(QZCLK);return;}const s=Math.floor((Date.now()-answers._t0)/1000);e.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');},1000);
   const el=document.getElementById("quiz");
   el.innerHTML=`<button class="back-link" onclick="renderQuizList()">← Denemelere dön</button>
   <div class="card">
-    <div class="eyebrow">Deneme</div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><div class="eyebrow">Deneme</div><span class="xp-chip">⏱ <span id="qclk">0:00</span></span></div>
     <h2 style="margin:.1em 0">${q.name}</h2>
     ${q.type==="listen"?`<div class="note">🎧 ${q.audionote}</div>`:''}
     ${q.passage?`<div class="passage">${q.passage}</div>`:''}
@@ -3982,12 +3998,18 @@ function checkQuiz(id){
     document.getElementById("e"+i).classList.add("show");
   });
   if(S.scores[id]===undefined||correct>S.scores[id]){S.scores[id]=correct;save();renderDash();}
+  clearInterval(QZCLK);
+  const qsecs=Math.max(1,Math.round((Date.now()-(answers._t0||Date.now()))/1000));
+  const qperQ=Math.round(qsecs/q.questions.length);
+  const qtime=Math.floor(qsecs/60)+':'+String(qsecs%60).padStart(2,'0');
+  const paceMsg=qperQ<=75?'⚡ Sınav temposundasın ('+qperQ+' sn/soru).':'🐢 '+qperQ+' sn/soru — sınavda ~75 sn var, tempo çalış.';
   const pct=Math.round(correct/q.questions.length*100);
   const msg=pct>=70?"Harika! Bu seviyeyi koru. 💪":pct>=50?"İyi yolda. Yanlışları hata defterine yaz.":"Açıklamaları oku, bu konuyu programdan tekrar et.";
   document.getElementById("qfoot").innerHTML=`
     <div class="result-banner">
       <div class="big">${correct}/${q.questions.length}</div>
       <div>%${pct} · ${msg}</div>
+      <div style="font-size:13px;margin-top:4px">⏱ ${qtime} · ${paceMsg}</div>
     </div>
     <button class="btn dark" onclick="openQuiz('${id}')">Tekrar çöz</button>
     <button class="btn ghost" onclick="renderQuizList()">Denemelere dön</button>`;
