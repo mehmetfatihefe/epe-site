@@ -298,6 +298,13 @@
   .ctxen{font-size:16px;line-height:1.55}
   .ctxtr{color:var(--muted);font-size:13px;margin-top:2px}
   .ctxhl{background:var(--amber-soft);border-bottom:2px solid var(--amber);border-radius:4px;padding:0 3px;cursor:pointer;font-weight:600}
+  .fcard{margin:14px 0}
+  .fcard .fb{border-radius:12px;padding:11px 14px;margin-top:10px;font-size:14px;font-weight:700;display:none}
+  .fcard .fb.show{display:block}
+  .fcard .fb.ok{background:var(--green-soft);color:#137a52}
+  .fcard .fb.no{background:var(--red-soft);color:#b5302f}
+  .fnum{font-size:11.5px;font-weight:800;letter-spacing:1px;color:var(--muted);margin-bottom:4px}
+  .fhead{position:sticky;top:0;z-index:6;background:var(--paper);padding:10px 0 8px;display:flex;align-items:center;gap:12px}
   .gtab{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0}
   .gtab th{background:var(--surface);border:1px solid var(--line);padding:7px 9px;text-align:left;font-size:12px;letter-spacing:.4px;color:var(--muted)}
   .gtab td{border:1px solid var(--line);padding:7px 9px;vertical-align:top;line-height:1.5}
@@ -3461,7 +3468,7 @@ function startDueReview(){
   const items=[{type:'tip',title:'Günün Tekrarı 🔁',html:'Bugün hatırlama zamanı gelen <b>'+due.length+' soru</b>. Aralıklı tekrar: tam unutmadan tazele — kalıcılığın sırrı tam olarak bu! 💪'}];
   shuffle(due).slice(0,20).forEach(x=>items.push(x));
   LSN={id:'__due__',review:true,items:items,i:0,t0:Date.now(),correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
-  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
+  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLessonFeed();
 }
 /* Hata defteri */
 function activeMistakes(){return (S.mistakes||[]).filter(m=>!m.resolved);}
@@ -3495,7 +3502,7 @@ function buildMistakeLesson(){
 function startMistakeReview(){
   if(!activeMistakes().length){alert('Hata defterin boş — harika! 🎉');return;}
   LSN={id:'__mistakes__',review:true,items:buildMistakeLesson(),i:0,t0:Date.now(),correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
-  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
+  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLessonFeed();
 }
 
 /* ===== Duolingo tarzı ders motoru ===== */
@@ -3549,9 +3556,6 @@ function buildLesson(id){
   shuffle(hard).forEach(x=>items.push(x));
   // 4) ÜRETİM ZİRVESİ: kendi cümleni yaz → AI kontrol etsin (anahtar varsa)
   if(hasKey())items.push({type:'write',prompt:'“'+g.title+'” kuralını kullanarak kendi İngilizce cümleni yaz.',rule:g.title+' — '+strip(g.summary)});
-  // 5) KALICILIK İÇİN HIZLI TEKRAR
-  const recap=shuffle(easy.filter(x=>x.type==='mc')).slice(0,3).map(x=>Object.assign({},x));
-  if(recap.length){items.push({type:'tip',title:g.title+' — Hızlı Tekrar 🔁',html:'Az önce öğrendiklerini pekiştirelim. Aynı yapılar tekrar geliyor — akılda kalsın diye! 💪'});recap.forEach(x=>items.push(x));}
   return items;
 }
 function buildReviewLesson(){
@@ -3569,7 +3573,7 @@ function buildReviewLesson(){
 function startReview(){
   if(!GRAMMAR.some(g=>S.gram[g.id])){alert('Önce en az bir modülü bitir; sonra Karışık Tekrar açılır.');return;}
   LSN={id:'__review__',review:true,items:buildReviewLesson(),i:0,t0:Date.now(),correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
-  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
+  document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLessonFeed();
 }
 /* 📖 Konu Kitapçığı: dersi oynamadan tam konu anlatımını oku (tekrar/başvuru için) */
 function openGramBook(id){
@@ -3600,11 +3604,155 @@ function openGramBook(id){
   ov.classList.add("show");document.body.style.overflow="hidden";
   ov.innerHTML=h;
 }
+/* ===== DİKEY DERS AKIŞI: tüm adımlar tek sayfada, aşağı kaydırarak çöz ===== */
+function fSt(i){return LSN.state[i]=LSN.state[i]||{answered:false,built:[],bank:[],mSel:null,mDone:{},mErr:0};}
+function fAnswerable(t){return ['mc','gap','build','listen','transform','spot','match','write'].indexOf(t)>=0;}
+function feedExBox(e){return `<div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0"><div style="font-size:15.5px;line-height:1.5">${e.en}</div><div class="muted" style="font-size:13px;margin-top:2px">${esc(e.tr)}</div></div>`;}
+function feedCard(it,i){
+  const num=`<div class="fnum" id="fn_${i}"></div>`;
+  if(it.type==='notice')return `<div class="card fcard"><div class="fnum" style="color:var(--green)">🔎 ÖNCE FARK ET</div><h3 style="margin:.2em 0;font-size:17px">${esc(it.q)}</h3>${it.ex.map(feedExBox).join('')}<p class="muted" style="font-size:12.5px;margin:.4em 0 0">Kalıbı tahmin et; hemen altındaki anlatımla karşılaştır.</p></div>`;
+  if(it.type==='teach')return `<div class="card fcard"><div class="fnum" style="color:var(--amber)">📚 KONU ANLATIMI · ${it.idx}/${it.tot}</div><h3 style="margin:.2em 0;font-size:17px">${it.h}</h3><div style="font-size:14.5px;line-height:1.75">${it.p}</div>${(it.ex||[]).map(feedExBox).join('')}</div>`;
+  if(it.type==='tip')return `<div class="card fcard"><div class="fnum" style="color:var(--amber)">💡 KURAL</div><h3 style="margin:.2em 0;font-size:17px">${esc(it.title)}</h3><div style="font-size:14.5px;line-height:1.75">${it.html}</div></div>`;
+  if(it.type==='gtable'){const tb=it.table;
+    return `<div class="card fcard"><div class="fnum" style="color:var(--amber)">📊 ÖZET TABLO</div><h3 style="margin:.2em 0;font-size:17px">${esc(tb.title||it.title)}</h3>
+    <div style="overflow-x:auto"><table class="gtab"><tr>${tb.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${tb.rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table></div>
+    ${(it.signals&&it.signals.length)?`<div style="margin-top:8px"><b style="font-size:13px">🔑 Sinyal kelimeler:</b><br>${it.signals.map(s=>`<span class="sigchip">${esc(s.w)} → <b>${esc(s.use)}</b></span>`).join('')}</div>`:''}</div>`;}
+  if(it.type==='traps')return `<div class="card fcard"><div class="fnum" style="color:var(--red)">⚠️ SINAV TUZAKLARI</div>${it.traps.map(t=>`<div class="trapbox"><div class="trapbad">✗ ${esc(t.bad)}</div><div class="trapgood">✓ ${esc(t.good)}</div><div class="trapwhy">${esc(t.why)}</div></div>`).join('')}</div>`;
+  if(it.type==='context')return `<div class="card fcard"><div class="fnum" style="color:var(--green)">💬 GERÇEK KULLANIM</div>
+    <div class="ctxbox">${it.lines.map(l=>`<div class="ctxline"><div class="ctxen">${esc(strip(l.en)).replace(/\[\[/g,'<span class="ctxhl" onclick="fCtxTip('+i+')">').replace(/\]\]/g,'</span>')}</div><div class="ctxtr">${esc(l.tr)}</div></div>`).join('')}</div>
+    ${it.focus?'<div class="ai-hint" style="margin-top:8px">👀 '+esc(it.focus)+'</div>':''}<div id="ctxTip_${i}"></div></div>`;
+  if(it.type==='mc')return `<div class="card fcard" id="fc_${i}">${num}<h3 style="margin:.2em 0 .5em;font-size:16.5px">${esc(it.q)}</h3>
+    <div id="ch_${i}">${it.opts.map((o,j)=>`<button class="lchoice" onclick="fMC(${i},${j})">${esc(o)}</button>`).join('')}</div><div class="fb" id="fb_${i}"></div></div>`;
+  if(it.type==='gap')return `<div class="card fcard" id="fc_${i}">${num}<h3 style="margin:.2em 0 .5em;font-size:16.5px">${esc(it.q)}</h3>
+    <div style="display:flex;gap:8px"><input id="gap_${i}" class="gapin" style="flex:1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="cevabını yaz…" onkeydown="if(event.key==='Enter')fGap(${i})"><button class="btn green" onclick="fGap(${i})">Kontrol</button></div><div class="fb" id="fb_${i}"></div></div>`;
+  if(it.type==='build'||it.type==='listen'||it.type==='transform'){
+    const label=it.type==='listen'?'🎧 DİNLE VE CÜMLEYİ KUR':(it.type==='transform'?'AYNI ANLAMA GELECEK ŞEKİLDE KUR':'KELİMELERE DOKUNARAK CÜMLEYİ KUR');
+    const top=it.type==='listen'?`<div style="display:flex;gap:8px;margin:6px 0 10px"><button class="btn dark" style="flex:1" onclick="speak(LSN.items[${i}].answer)">🔊 Dinle</button><button class="btn ghost" onclick="speak(LSN.items[${i}].answer,true)">🐢 Yavaş</button></div><div class="ai-hint">İpucu (Türkçe): ${esc(it.tr)}</div>`
+      :(it.type==='transform'?`<h3 style="margin:.2em 0 .5em;font-size:16px">🔁 ${esc(it.from)}</h3>${it.hint?'<div class="ai-hint">İpucu: '+esc(it.hint)+'</div>':''}`
+      :`<h3 style="margin:.2em 0 .5em;font-size:16.5px">🇹🇷 ${esc(it.tr)}</h3>`);
+    return `<div class="card fcard" id="fc_${i}">${num}<div class="fnum">${label}</div>${top}
+      <div class="build-answer" id="bAns_${i}"></div><div class="build-bank" id="bBank_${i}"></div>
+      <button class="btn green" id="bbtn_${i}" style="margin-top:10px" disabled onclick="fBuildCheck(${i})">Kontrol et</button><div class="fb" id="fb_${i}"></div></div>`;}
+  if(it.type==='match')return `<div class="card fcard" id="fc_${i}">${num}<div class="fnum">EŞLEŞTİR — İNGİLİZCE ↔ TÜRKÇE</div><div class="lmatch" id="lm_${i}"></div><div class="fb" id="fb_${i}"></div></div>`;
+  if(it.type==='spot')return `<div class="card fcard" id="fc_${i}">${num}<div class="fnum">HATALI KELİMEYE DOKUN</div>
+    <h3 style="font-size:17px;line-height:1.8;margin:.3em 0">${it.words.map((w,j)=>`<span class="spotw" id="sw_${i}_${j}" onclick="fSpot(${i},${j})">${esc(w)}</span>`).join(' ')}</h3>
+    ${it.hint?'<div class="ai-hint">İpucu: '+esc(it.hint)+'</div>':''}<div class="fb" id="fb_${i}"></div></div>`;
+  if(it.type==='write')return `<div class="card fcard" id="fc_${i}">${num}<div class="fnum">✍️ KENDİ CÜMLENİ YAZ</div><h3 style="margin:.2em 0 .5em;font-size:16px">${esc(it.prompt)}</h3>
+    <textarea id="w_${i}" class="writein" placeholder="İngilizce cümleni buraya yaz…"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn green" id="wbtn_${i}" onclick="fWrite(${i})">AI'ya kontrol ettir</button><button class="btn ghost" onclick="fSkipWrite(${i})">Atla</button></div><div id="wout_${i}" style="margin-top:8px"></div></div>`;
+  return '';
+}
+function renderLessonFeed(){
+  LSN.state={};LSN.feed=true;
+  const cards=LSN.items.map((it,i)=>feedCard(it,i)).join('');
+  document.getElementById('lessonOverlay').innerHTML=`<div style="max-width:660px;margin:0 auto;padding:0 14px 40px">
+    <div class="fhead"><div class="lesson-top" style="margin:0"><button class="x" onclick="quitLesson()">✕</button></div>
+      <div class="lprog"><i id="fprog" style="width:0%"></i></div><div class="hearts" id="fstat">${topStatHTML()}</div></div>
+    <p class="muted" style="font-size:12.5px;margin:6px 0 0">Aşağı kaydır: önce konuyu oku, sonra soruları sırayla çöz. Yanlışta açıklama hemen altında.</p>
+    ${cards}
+    <div id="ffin" style="margin:18px 0"></div>
+    <div class="ask-wrap"><button class="ask-toggle" onclick="toggleAsk()">🤖 Takıldın mı? Yapay zekâya sor</button>
+      <div class="ask-body" id="askPanel" style="display:none">${hasKey()?`
+        <div class="ai-row">
+          <button class="gsub-btn" onclick="lAsk('Bu sorunun doğru cevabının neden böyle olduğunu basitçe açıkla.')">Neden bu cevap?</button>
+          <button class="gsub-btn" onclick="lAsk('Bu konuyu çok basit bir dille, kısa anlat.')">Basit anlat</button>
+          <button class="gsub-btn" onclick="lAsk('Bu yapıyla 2 yeni örnek cümle ver, Türkçeleriyle.')">Örnek ver</button>
+        </div>
+        <div class="chat-in" style="margin-top:8px"><input id="askIn" placeholder="Kendi sorunu yaz..." onkeydown="if(event.key==='Enter')lAsk()"><button class="btn dark" onclick="lAsk()">Sor</button></div>
+        <div id="askOut" style="margin-top:8px"></div>`:aiOffBox()}
+      </div></div></div>`;
+  LSN.items.forEach((it,i)=>{
+    if(it.type==='build'||it.type==='listen'||it.type==='transform')fDrawBuild(i);
+    if(it.type==='match')fInitMatch(i);
+  });
+  fUpd();
+  if(LSN.review)startLsnClock();
+  document.getElementById('lessonOverlay').scrollTop=0;
+}
+function fUpd(){
+  const idxs=LSN.items.map((it,i)=>fAnswerable(it.type)?i:-1).filter(i=>i>=0);
+  let qn=0;idxs.forEach(i=>{qn++;const el=document.getElementById('fn_'+i);if(el&&!el.textContent)el.textContent='SORU '+qn+' / '+idxs.length;});
+  const done=idxs.filter(i=>fSt(i).answered).length;
+  const bar=document.getElementById('fprog');if(bar)bar.style.width=Math.round(done/Math.max(1,idxs.length)*100)+'%';
+  const st=document.getElementById('fstat');if(st)st.innerHTML=topStatHTML();
+  const fin=document.getElementById('ffin');
+  if(fin){
+    if(done>=idxs.length)fin.innerHTML='<button class="bigbtn green" onclick="endLesson()">Dersi bitir 🎉</button>';
+    else fin.innerHTML='<button class="bigbtn gray" disabled>Bitirmek için '+(idxs.length-done)+' soru kaldı</button>';
+  }
+}
+function fFb(i,ok,ex){const fb=document.getElementById('fb_'+i);if(fb){fb.className='fb show '+(ok?'ok':'no');fb.innerHTML=(ok?'✅ Doğru!':'❌ Yanlış — sorun değil, açıklamayı oku:')+(ex?'<br><span style="font-weight:400">'+esc(ex)+'</span>':'');}}
+function fDone(i,ok){const st=fSt(i);if(st.answered)return false;st.answered=true;st.ok=ok;LSN.total++;if(ok)LSN.correct++;fUpd();return true;}
+function fCtxTip(i){const t=document.getElementById('ctxTip_'+i);if(t)t.innerHTML='<div class="ai-out box" style="margin-top:8px;font-size:13px">💡 '+esc(LSN.items[i].rule||'')+'</div>';}
+function fMC(i,j){
+  const it=LSN.items[i],st=fSt(i);if(st.answered)return;LSN.i=i;
+  const ok=j===it.a;fDone(i,ok);srsRecord(it,ok,j);
+  document.querySelectorAll('#ch_'+i+' .lchoice').forEach((b,k)=>{b.classList.add('disabled');b.style.pointerEvents='none';if(k===it.a)b.classList.add('correct');if(k===j&&!ok)b.classList.add('wrong');});
+  fFb(i,ok,it.ex);
+}
+function fGap(i){
+  const it=LSN.items[i],st=fSt(i);if(st.answered)return;LSN.i=i;
+  const inp=document.getElementById('gap_'+i);const v=inp?inp.value:'';if(!v.trim())return;
+  const ok=gapMatch(v,it);fDone(i,ok);srsRecord(it,ok,null);
+  if(inp)inp.disabled=true;
+  fFb(i,ok,'Doğru cevap: '+it.answer+(it.ex?' — '+it.ex:''));
+}
+function fDrawBuild(i){
+  const it=LSN.items[i],st=fSt(i);
+  if(!st.bank.length&&!st.answered)st.bank=shuffle(it.answer.split(/\s+/).map((w,idx)=>({w:w,idx:idx})));
+  const ans=document.getElementById('bAns_'+i),bank=document.getElementById('bBank_'+i);if(!ans||!bank)return;
+  ans.innerHTML=st.built.map((b,k)=>`<span class="chip" onclick="fBUn(${i},${k})">${esc(b.w)}</span>`).join('')||'<span class="ai-hint" style="align-self:center">Kelimelere dokun…</span>';
+  bank.innerHTML=st.bank.map(b=>{const used=st.built.some(x=>x.idx===b.idx);return `<span class="chip ${used?'used':''}" onclick="fBTap(${i},${b.idx})">${esc(b.w)}</span>`;}).join('');
+  const btn=document.getElementById('bbtn_'+i);if(btn&&!st.answered)btn.disabled=!st.built.length;
+}
+function fBTap(i,idx){const st=fSt(i);if(st.answered)return;const b=st.bank.find(x=>x.idx===idx);if(!b||st.built.some(x=>x.idx===idx))return;st.built.push(b);fDrawBuild(i);}
+function fBUn(i,k){const st=fSt(i);if(st.answered)return;st.built.splice(k,1);fDrawBuild(i);}
+function fBuildCheck(i){
+  const it=LSN.items[i],st=fSt(i);if(st.answered||!st.built.length)return;LSN.i=i;
+  const ok=normalize(st.built.map(b=>b.w).join(' '))===normalize(it.answer);
+  fDone(i,ok);srsRecord(it,ok,null);
+  const btn=document.getElementById('bbtn_'+i);if(btn)btn.disabled=true;
+  document.querySelectorAll('#bBank_'+i+' .chip').forEach(c=>c.classList.add('used'));
+  fFb(i,ok,(it.type==='transform'?'Doğru: ':'Doğru cümle: ')+it.answer);
+}
+function fInitMatch(i){const it=LSN.items[i],st=fSt(i);st._mEn=it.pairs.map((p,k)=>({t:p.en,i:k}));st._mTr=shuffle(it.pairs.map((p,k)=>({t:p.tr,i:k})));fDrawMatch(i);}
+function fDrawMatch(i){
+  const st=fSt(i);const w=document.getElementById('lm_'+i);if(!w)return;
+  const col=(arr,side)=>`<div class="match-col">${arr.map(o=>`<button class="mbtn ${st.mDone[o.i]?'matched':''} ${st.mSel&&st.mSel.side===side&&st.mSel.i===o.i?'sel':''}" onclick="fMTap(${i},'${side}',${o.i})">${esc(o.t)}</button>`).join('')}</div>`;
+  w.innerHTML=col(st._mEn,'en')+col(st._mTr,'tr');
+}
+function fMTap(i,side,k){
+  const it=LSN.items[i],st=fSt(i);if(st.answered||st.mDone[k])return;LSN.i=i;
+  if(!st.mSel||st.mSel.side===side){st.mSel={side:side,i:k};fDrawMatch(i);return;}
+  if(st.mSel.i===k){st.mDone[k]=true;st.mSel=null;fDrawMatch(i);
+    if(Object.keys(st.mDone).length===it.pairs.length){fDone(i,st.mErr===0);fFb(i,st.mErr===0,st.mErr?'Hepsi eşleşti ('+st.mErr+' hatayla).':'Hepsi eşleşti!');}
+  }else{st.mErr++;st.mSel=null;fDrawMatch(i);}
+}
+function fSpot(i,j){
+  const it=LSN.items[i],st=fSt(i);if(st.answered)return;LSN.i=i;
+  const ok=j===it.badIdx;fDone(i,ok);srsRecord(it,ok,null);
+  it.words.forEach((w,k)=>{const s=document.getElementById('sw_'+i+'_'+k);if(!s)return;s.style.pointerEvents='none';if(k===it.badIdx)s.classList.add('correct');if(k===j&&!ok)s.classList.add('wrong');});
+  fFb(i,ok,'Hata: “'+it.wrong+'” → '+it.fix+(it.hint?' ('+it.hint+')':''));
+}
+function fSkipWrite(i){const st=fSt(i);if(st.answered)return;st.answered=true;LSN.total++;fUpd();const ta=document.getElementById('w_'+i),btn=document.getElementById('wbtn_'+i);if(ta)ta.disabled=true;if(btn)btn.disabled=true;}
+async function fWrite(i){
+  const it=LSN.items[i],st=fSt(i);if(st.answered)return;LSN.i=i;
+  const ta=document.getElementById('w_'+i),out=document.getElementById('wout_'+i),btn=document.getElementById('wbtn_'+i);
+  const text=(ta&&ta.value||'').trim();
+  if(!text){if(out)out.innerHTML='<div class="ai-hint">Önce bir cümle yaz 🙂</div>';return;}
+  fDone(i,true); // üretim: katılım puanı
+  if(ta)ta.disabled=true;if(btn)btn.disabled=true;
+  if(!hasKey()){if(out)out.innerHTML='<div class="ai-hint">Cümlen kaydedildi. (AI geri bildirimi için anahtar ekleyebilirsin.)</div>';return;}
+  if(out)out.innerHTML='<div class="ai-hint"><span class="spin"></span>AI cümleni kontrol ediyor…</div>';
+  const prompt="Öğrenci '"+(it.rule||'')+"' gramer kuralını kullanarak şu İngilizce cümleyi yazdı:\n\""+text+"\"\n\nKısa Türkçe geri bildirim ver: Cümle bu kurala uygun ve doğru mu? Hata varsa düzeltilmiş hâlini yaz ve nedenini tek cümleyle açıkla. En sonda kalın olarak '✅ Doğru' veya '✏️ Düzeltildi' yaz.";
+  try{const r=await gemini(prompt,brainSys());if(out)out.innerHTML='<div class="ai-out box">'+esc(r)+'</div>';}
+  catch(e){if(out)out.innerHTML='<div class="ai-fb bad">⚠️ '+esc(e.message)+'</div>';}
+}
 function startGrammarLesson(id){
   LSN={id:id,items:buildLesson(id),i:0,t0:Date.now(),correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
   document.getElementById("lessonOverlay").classList.add("show");
   document.body.style.overflow="hidden";
-  renderLesson();
+  renderLessonFeed();
 }
 function closeLesson(refresh){clearInterval(LSNCLK);document.getElementById("lessonOverlay").classList.remove("show");document.body.style.overflow="";if(refresh){renderGrammar();renderDash();}}
 function quitLesson(){if(confirm("Dersten çıkılsın mı? Bu turun ilerlemesi kaydedilmez."))closeLesson(false);}
@@ -3614,7 +3762,7 @@ function lsnClock(){const s=Math.floor((Date.now()-(LSN.t0||Date.now()))/1000);r
 function startLsnClock(){clearInterval(LSNCLK);LSNCLK=setInterval(function(){const e=document.getElementById('lclk');if(e)e.textContent=lsnClock();},1000);}
 function topStatHTML(){
   if(LSN.review)return '⏱ <span id="lclk">'+lsnClock()+'</span> · ✅ '+LSN.correct+'/'+LSN.total;
-  return '✅ '+LSN.correct+(LSN.total>LSN.correct?' · 🔁 '+(LSN.total-LSN.correct):'');
+  return '✅ '+LSN.correct+(LSN.total>LSN.correct?' · ❌ '+(LSN.total-LSN.correct):'');
 }
 function lFooter(text,disabled){return '<div class="fb" id="fbBox"></div><button class="bigbtn '+(disabled?'gray':'green')+'" id="lbtn" '+(disabled?'disabled':'')+' onclick="lCheck()">'+text+'</button>';}
 function renderLesson(){
