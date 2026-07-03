@@ -3120,36 +3120,200 @@ const GBANK={
  G16:[{en:"I don't know whether he will come.",tr:"Gelecek mi bilmiyorum."},{en:"What he said was true.",tr:"Söylediği doğruydu."},{en:"Tell me what you want.",tr:"Ne istediğini söyle."},{en:"The man standing there is my uncle.",tr:"Orada duran adam amcam."},{en:"The car parked outside is mine.",tr:"Dışarıdaki araba benim."},{en:"I am not sure if it's correct.",tr:"Doğru mu emin değilim."},{en:"I wonder why she left.",tr:"Neden gittiğini merak ediyorum."},{en:"The woman wearing red is a doctor.",tr:"Kırmızı giyen kadın doktor."},{en:"Do you know where he lives?",tr:"Nerede yaşadığını biliyor musun?"},{en:"What surprised me was his answer.",tr:"Beni şaşırtan cevabıydı."}]
 };
 
+/* ===== EK SORU HAVUZU: her modüle sınav-tipi ek sorular (tekrarlar için çeşitlilik) ===== */
+const GMORE={
+ G01:[
+  {q:"___ any sugar in the tea?",opts:["Is there","Are there","There is"],a:0,ex:"sugar sayılamaz/tekil → Is there."},
+  {q:"My keys ___ on the table.",opts:["is","are","am"],a:1,ex:"keys çoğul → are."},
+  {q:"She is ___ honest person.",opts:["a","an","the"],a:1,ex:"honest'ta h okunmaz, sesli sesle başlar → an."},
+  {q:"___ sun rises in the east.",opts:["A","An","The"],a:2,ex:"Tek ve herkesçe bilinen → the."},
+  {q:"Hangisi doğru sorudur?",opts:["Is there a bank near here?","There is a bank near here?","Near here a bank is?"],a:0,ex:"Soru: Is there …?"}],
+ G02:[
+  {q:"Listen! Somebody ___ at the door.",opts:["knocks","is knocking","knock"],a:1,ex:"Listen! → şu an → continuous."},
+  {q:"The Earth ___ around the Sun.",opts:["is going","goes","go"],a:1,ex:"Genel doğru → Present Simple + 3.tekil."},
+  {q:"I ___ this book — it's boring.",opts:["am not liking","don't like","not like"],a:1,ex:"like durum fiili, continuous olmaz."},
+  {q:"We ___ at a hotel this week.",opts:["stay","are staying","stays"],a:1,ex:"Geçici durum → continuous."},
+  {q:"What time ___ the museum open?",opts:["is","does","do"],a:1,ex:"Genel bilgi sorusu → does + open."}],
+ G03:[
+  {q:"I ___ TV when the lights went out.",opts:["watched","was watching","watch"],a:1,ex:"Kesilen süren eylem → Past Continuous."},
+  {q:"She ___ her keys yesterday.",opts:["lose","lost","was losing"],a:1,ex:"Dün olup bitmiş → lost."},
+  {q:"___ you enjoy the film last night?",opts:["Did","Do","Were"],a:0,ex:"Geçmiş soru → Did + yalın fiil."},
+  {q:"There ___ a cinema here years ago.",opts:["used to be","used to being","use to be"],a:0,ex:"used to + yalın fiil (be)."},
+  {q:"He ___ his leg while he ___ football.",opts:["broke / was playing","was breaking / played","broke / played"],a:0,ex:"Kısa olay Past Simple + arka plan Continuous."}],
+ G04:[
+  {q:"I promise I ___ you tomorrow.",opts:["call","will call","am calling"],a:1,ex:"Söz vermek → will."},
+  {q:"We've bought the tickets. We ___ to Rome.",opts:["will travel","are travelling","travel"],a:1,ex:"Kesinleşmiş plan → Present Continuous."},
+  {q:"She ___ have a baby.",opts:["will","is going to","goes to"],a:1,ex:"Kanıta dayalı yakın gelecek → going to."},
+  {q:"Call me before you ___.",opts:["will leave","leave","left"],a:1,ex:"before/when + present; will kullanılmaz."},
+  {q:"I'm sure they ___ the match.",opts:["win","will win","are winning"],a:1,ex:"Tahmin (I'm sure) → will."}],
+ G05:[
+  {q:"You ___ be quiet in the library.",opts:["must","might","could"],a:0,ex:"Kural/zorunluluk → must."},
+  {q:"He ___ be at home — his car isn't here.",opts:["can't","must","mustn't"],a:0,ex:"Olumsuz mantıksal çıkarım → can't."},
+  {q:"___ I open the window?",opts:["May","Must","Should to"],a:0,ex:"Kibar izin → May I…?"},
+  {q:"We ___ hurry; we have plenty of time.",opts:["mustn't","don't have to","had better"],a:1,ex:"Gerek yok → don't have to."},
+  {q:"You ___ better take an umbrella.",opts:["would","had","should"],a:1,ex:"had better + yalın fiil."}],
+ G06:[
+  {q:"This is ___ book I have ever read.",opts:["the most interesting","more interesting","most interesting"],a:0,ex:"ever → superlative → the most."},
+  {q:"The exam was ___ than I expected.",opts:["easy","easier","easiest"],a:1,ex:"than → comparative."},
+  {q:"___ you start, ___ you finish.",opts:["The earlier / the sooner","Earlier / sooner","The early / the soon"],a:0,ex:"the + comparative, the + comparative."},
+  {q:"My results are ___ worse than yours.",opts:["much","more","most"],a:0,ex:"Comparative güçlendirme → much worse."},
+  {q:"This hotel is not ___ expensive ___ that one.",opts:["as / as","so / that","more / than"],a:0,ex:"not as … as = eşit değil."}],
+ G07:[
+  {q:"There is ___ information about it online.",opts:["many","a lot of","a few"],a:1,ex:"information sayılamaz → a lot of."},
+  {q:"___ people know this secret.",opts:["Few","A few","Little"],a:0,ex:"Neredeyse hiç (olumsuz) + sayılabilir → Few."},
+  {q:"Add ___ salt to the soup.",opts:["a little","a few","many"],a:0,ex:"salt sayılamaz → a little."},
+  {q:"How ___ eggs do we need?",opts:["much","many","little"],a:1,ex:"eggs sayılabilir → many."},
+  {q:"He spent ___ his money on games.",opts:["most of","much of the","the many of"],a:0,ex:"most of + iyelik."}],
+ G08:[
+  {q:"Would you mind ___ the door?",opts:["to close","closing","close"],a:1,ex:"mind + V-ing."},
+  {q:"They agreed ___ the price.",opts:["reducing","to reduce","reduce"],a:1,ex:"agree + to V."},
+  {q:"My parents don't let me ___ out late.",opts:["to stay","staying","stay"],a:2,ex:"let + yalın fiil."},
+  {q:"She is thinking of ___ abroad.",opts:["moving","to move","move"],a:0,ex:"Edat (of) + V-ing."},
+  {q:"The teacher expects us ___ hard.",opts:["study","to study","studying"],a:1,ex:"expect sb TO do."}],
+ G09:[
+  {q:"The coffee was ___ hot that I couldn't drink it.",opts:["so","such","too"],a:0,ex:"so + sıfat + that."},
+  {q:"It was ___ boring lecture that I left.",opts:["so","such a","a so"],a:1,ex:"such + a + sıfat + isim."},
+  {q:"He speaks ___ fast for me to understand.",opts:["too","so","enough"],a:0,ex:"too + sıfat + for sb + to V."},
+  {q:"Is the water warm ___ to swim in?",opts:["too","enough","such"],a:1,ex:"Sıfat + enough."},
+  {q:"We don't have ___ chairs for everyone.",opts:["enough","too","so"],a:0,ex:"enough + isim (yeterince sandalye)."}],
+ G10:[
+  {q:"The students ___ passed the exam celebrated.",opts:["who","which","whose"],a:0,ex:"Kişi + özne → who."},
+  {q:"The film, ___ won three awards, is on tonight.",opts:["that","which","whose"],a:1,ex:"Virgüllü (non-defining) → which."},
+  {q:"Is that the restaurant ___ you had dinner?",opts:["which","where","that"],a:1,ex:"Yer + eksiksiz cümle → where."},
+  {q:"I met a woman ___ brother works with you.",opts:["whose","who's","which"],a:0,ex:"İyelik → whose."},
+  {q:"2010 was the year ___ we graduated.",opts:["where","when","which"],a:1,ex:"Zaman → when."}],
+ G11:[
+  {q:"The results ___ tomorrow.",opts:["will announce","will be announced","announce"],a:1,ex:"Edilgen gelecek → will be + V3."},
+  {q:"This castle ___ in the 15th century.",opts:["built","was built","is built"],a:1,ex:"Geçmiş edilgen → was built."},
+  {q:"Breakfast ___ between 7 and 10.",opts:["serves","is served","is serving"],a:1,ex:"Genel kural edilgen → is served."},
+  {q:"The problem ___ yet.",opts:["hasn't solved","hasn't been solved","didn't solve"],a:1,ex:"Perfect edilgen + yet."},
+  {q:"My wallet ___! Call the police!",opts:["has been stolen","has stolen","stole"],a:0,ex:"Cüzdan çalındı (edilgen perfect)."}],
+ G12:[
+  {q:"If we ___ now, we'll catch the bus.",opts:["leave","left","will leave"],a:0,ex:"Type 1: if + present."},
+  {q:"If he ___ harder, he would earn more.",opts:["works","worked","had worked"],a:1,ex:"Type 2: if + past."},
+  {q:"I ___ you if I had known your number.",opts:["would call","would have called","called"],a:1,ex:"Type 3 → would have + V3."},
+  {q:"___ it rains, the match will be played.",opts:["Even if","Unless","If not"],a:0,ex:"even if = yağsa bile."},
+  {q:"If I ___ the answer, I would tell you.",opts:["knew","know","had known"],a:0,ex:"Type 2 (şimdiki hayal) → knew."}],
+ G13:[
+  {q:"She said she ___ the film before.",opts:["saw","had seen","sees"],a:1,ex:"Backshift: saw → had seen."},
+  {q:"He asked me where I ___.",opts:["work","worked","do work"],a:1,ex:"Backshift + düz cümle sırası."},
+  {q:"They ___ us that the road was closed.",opts:["said","told","asked"],a:1,ex:"Nesne (us) → told."},
+  {q:"“Can you help?” → She asked if I ___ help.",opts:["can","could","will"],a:1,ex:"Backshift: can → could."},
+  {q:"The doctor ___ me to rest for a week.",opts:["suggested","advised","said"],a:1,ex:"advise sb to do."}],
+ G14:[
+  {q:"We ___ the walls painted last week.",opts:["had","made","got to"],a:0,ex:"have sth done → had."},
+  {q:"The boss made everyone ___ late.",opts:["to work","work","working"],a:1,ex:"make + yalın fiil."},
+  {q:"I must ___ before the interview.",opts:["cut my hair","have my hair cut","have cut my hair"],a:1,ex:"Başkasına yaptırma → have my hair cut."},
+  {q:"She got her assistant ___ the files.",opts:["organize","to organize","organizing"],a:1,ex:"get sb TO do."},
+  {q:"They didn't let us ___ photos inside.",opts:["taking","to take","take"],a:2,ex:"let + yalın fiil."}],
+ G15:[
+  {q:"___ his illness, he attended the meeting.",opts:["Although","Despite","However"],a:1,ex:"+ isim → Despite."},
+  {q:"The road was icy; ___, we drove slowly.",opts:["therefore","moreover","whereas"],a:0,ex:"Sebep-sonuç → therefore."},
+  {q:"___ he is rich, he lives simply.",opts:["Despite","Even though","Because of"],a:1,ex:"+ tam cümle, zıtlık → Even though."},
+  {q:"The flat is small. ___, it is expensive.",opts:["Moreover","Therefore","Instead"],a:0,ex:"Ekleme (üstelik) → Moreover."},
+  {q:"She studied hard; ___, she failed.",opts:["as a result","nevertheless","furthermore"],a:1,ex:"Beklenmedik zıtlık → nevertheless."}],
+ G16:[
+  {q:"___ worries me is his silence.",opts:["What","That","Which"],a:0,ex:"Özne konumunda noun clause → What."},
+  {q:"Nobody knows ___ the meeting was cancelled.",opts:["why","that","despite"],a:0,ex:"Sebep bilgisi → why."},
+  {q:"The bridge ___ last year is already damaged.",opts:["building","built","builds"],a:1,ex:"Pasif kısaltma → built (= which was built)."},
+  {q:"The people ___ for the bus looked cold.",opts:["waited","waiting","who waiting"],a:1,ex:"Aktif kısaltma → waiting."},
+  {q:"I doubt ___ he will accept the offer.",opts:["whether","what","which"],a:0,ex:"Şüphe/belirsizlik → whether."}]
+};
+
 /* ===== Faz 2: sınav-tipi alıştırma bankası (dönüştürme + hata bulma) ===== */
 const GPLUS2={
+ G01:{transform:[
+   {from:"A cat is under the car.",to:"There is a cat under the car.",hint:"“var” → there is"},
+   {from:"Some children are in the park.",to:"There are some children in the park.",hint:"çoğul “var” → there are"},
+   {from:"She is a doctor. (soru yap)",to:"Is she a doctor?",hint:"soru: is başa gelir"}],
+  spot:[
+   {bad:"There are a problem with my phone.",wrong:"are",fix:"is (a problem tekil)",hint:"tekil → there is"},
+   {bad:"He have two brothers.",wrong:"have",fix:"has",hint:"he/she/it → has"}]},
+ G02:{transform:[
+   {from:"It is his habit to read at night.",to:"He usually reads at night.",hint:"alışkanlık → Present Simple"},
+   {from:"My sister is on a walk to school now.",to:"My sister is walking to school now.",hint:"şu an → is + -ing"}],
+  spot:[
+   {bad:"She is wanting a new phone.",wrong:"wanting",fix:"wants (durum fiili)",hint:"want continuous olmaz"},
+   {bad:"Water boil at 100 degrees.",wrong:"boil",fix:"boils",hint:"genel doğru + 3.tekil -s"}]},
+ G03:{transform:[
+   {from:"It was my habit to play chess as a child.",to:"I used to play chess as a child.",hint:"geçmiş alışkanlık → used to"},
+   {from:"During my sleep, the phone rang.",to:"While I was sleeping, the phone rang.",hint:"arka plan → Past Continuous"}],
+  spot:[
+   {bad:"Did you saw the news yesterday?",wrong:"saw",fix:"see (did + V1)",hint:"did varsa fiil yalın"},
+   {bad:"She didn't went to the party.",wrong:"went",fix:"go",hint:"didn't + yalın fiil"},
+   {bad:"They use to live in Ankara.",wrong:"use",fix:"used",hint:"geçmiş: used to"}]},
+ G04:{transform:[
+   {from:"My plan is to visit İzmir next week.",to:"I am going to visit İzmir next week.",hint:"plan → going to"},
+   {from:"The timetable says the bus departs at nine.",to:"The bus leaves at nine.",hint:"tarife → Present Simple"}],
+  spot:[
+   {bad:"When she will arrive, I will call you.",wrong:"will",fix:"(sil): when she arrives",hint:"zaman cümlesinde will olmaz"},
+   {bad:"Look at those clouds! It will rains.",wrong:"rains",fix:"rain (will + V1)",hint:"will + yalın fiil"}]},
  G05:{transform:[
    {from:"You are not allowed to smoke here.",to:"You mustn't smoke here.",hint:"yasak → mustn't"},
    {from:"It is not necessary for you to pay.",to:"You don't have to pay.",hint:"gerek yok → don't have to"},
    {from:"I am sure he is at home.",to:"He must be at home.",hint:"mantıksal kesinlik → must"}],
   spot:[
    {bad:"You had better to see a doctor.",wrong:"to",fix:"(sil): had better see",hint:"had better + yalın fiil"},
-   {bad:"She must to finish it today.",wrong:"to",fix:"must finish",hint:"must + yalın fiil"}]},
+   {bad:"She must to finish it today.",wrong:"to",fix:"must finish",hint:"must + yalın fiil"},
+   {bad:"He cans speak three languages.",wrong:"cans",fix:"can",hint:"modallar -s almaz"}]},
+ G06:{transform:[
+   {from:"My car is cheaper than yours.",to:"Your car is more expensive than mine.",hint:"karşıt yönden söyle"},
+   {from:"No student in the class is taller than Emre.",to:"Emre is the tallest student in the class.",hint:"en üstünlük kur"}],
+  spot:[
+   {bad:"This exam was more easier than the last one.",wrong:"more",fix:"(sil): easier",hint:"easier'a more eklenmez"},
+   {bad:"She is the most fast runner here.",wrong:"most",fix:"fastest",hint:"kısa sıfat → the -est"},
+   {bad:"Today is as hot than yesterday.",wrong:"than",fix:"as",hint:"as … as kalıbı"}]},
+ G07:{transform:[
+   {from:"We have more than enough time.",to:"We have plenty of time.",hint:"bolluk → plenty of"}],
+  spot:[
+   {bad:"How many money do you need?",wrong:"many",fix:"much (money sayılamaz)",hint:"money → much"},
+   {bad:"There isn't many milk left.",wrong:"many",fix:"much",hint:"milk sayılamayan"},
+   {bad:"She gave me a little coins.",wrong:"little",fix:"few (coins sayılabilir)",hint:"a few + çoğul isim"}]},
+ G08:{transform:[
+   {from:"Swimming is something I enjoy.",to:"I enjoy swimming.",hint:"enjoy + -ing"},
+   {from:"His plan is to buy a car.",to:"He plans to buy a car.",hint:"plan + to"}],
+  spot:[
+   {bad:"She avoided to answer my question.",wrong:"to",fix:"answering (avoid + -ing)",hint:"avoid + V-ing"},
+   {bad:"My parents let me to stay out late.",wrong:"to",fix:"(sil): let me stay",hint:"let + yalın fiil"},
+   {bad:"I look forward to hear from you.",wrong:"hear",fix:"hearing",hint:"look forward to + -ing"}]},
+ G09:{transform:[
+   {from:"The question was so complicated that nobody answered it.",to:"It was such a complicated question that nobody answered it.",hint:"so ↔ such dönüşümü"},
+   {from:"He is too young to drive.",to:"He is not old enough to drive.",hint:"too ↔ not … enough"}],
+  spot:[
+   {bad:"It was a so boring film.",wrong:"so",fix:"such (such a boring film)",hint:"isim varsa such"},
+   {bad:"The box is too much heavy.",wrong:"much",fix:"(sil): too heavy",hint:"too + sıfat"}]},
+ G10:{transform:[
+   {from:"The man lives next door. He is a doctor.",to:"The man who lives next door is a doctor.",hint:"who ile birleştir"},
+   {from:"I read a book. Its author is famous.",to:"I read a book whose author is famous.",hint:"iyelik → whose"}],
+  spot:[
+   {bad:"The woman which called you is my boss.",wrong:"which",fix:"who (kişi)",hint:"kişi → who"},
+   {bad:"That's the hotel which we stayed last summer.",wrong:"which",fix:"where",hint:"yer + tam cümle → where"}]},
  G11:{transform:[
    {from:"Someone stole my bike.",to:"My bike was stolen.",hint:"edilgen: be + V3"},
    {from:"People speak English here.",to:"English is spoken here.",hint:"edilgen geniş zaman"},
-   {from:"They have finished the work.",to:"The work has been finished.",hint:"edilgen perfect: has been + V3"}],
+   {from:"They have finished the work.",to:"The work has been finished.",hint:"edilgen perfect: has been + V3"},
+   {from:"They are building a new hospital.",to:"A new hospital is being built.",hint:"continuous edilgen: is being + V3"}],
   spot:[
    {bad:"The bridge was build in 1990.",wrong:"build",fix:"built",hint:"be + V3 (built)"},
    {bad:"English is speak all over the world.",wrong:"speak",fix:"spoken",hint:"be + V3 (spoken)"}]},
  G12:{transform:[
    {from:"Study, or you will fail.",to:"Unless you study, you will fail.",hint:"unless = if not"},
    {from:"I'm not rich, so I won't buy it.",to:"If I were rich, I would buy it.",hint:"Type 2: if + past, would V"},
-   {from:"She didn't study, so she failed.",to:"If she had studied, she would have passed.",hint:"Type 3: if + had V3, would have V3"}],
+   {from:"She didn't study, so she failed.",to:"If she had studied, she would have passed.",hint:"Type 3: if + had V3, would have V3"},
+   {from:"Without your help, I would have failed.",to:"If you had not helped me, I would have failed.",hint:"Type 3: if + had (not) V3"}],
   spot:[
    {bad:"If I will see her, I will tell her.",wrong:"will",fix:"see (if + present)",hint:"if-cümlesinde will olmaz"},
-   {bad:"If I was you, I would wait.",wrong:"was",fix:"were",hint:"Type 2: if I were you"}]},
+   {bad:"If I was you, I would wait.",wrong:"was",fix:"were",hint:"Type 2: if I were you"},
+   {bad:"If she would study harder, she would pass.",wrong:"would",fix:"studied",hint:"if tarafında would olmaz"}]},
  G13:{transform:[
    {from:'"I am tired," he said.',to:"He said he was tired.",hint:"backshift: am → was"},
    {from:'"I will call you," she said.',to:"She said she would call me.",hint:"will → would"},
-   {from:'"Where do you live?" he asked.',to:"He asked where I lived.",hint:"soru → düz cümle sırası"}],
+   {from:'"Where do you live?" he asked.',to:"He asked where I lived.",hint:"soru → düz cümle sırası"},
+   {from:'"Don\'t be late," she said to me.',to:"She told me not to be late.",hint:"emir → tell sb (not) to"}],
   spot:[
    {bad:"He said me that he was late.",wrong:"said",fix:"told",hint:"tell + nesne / say (nesnesiz)"},
-   {bad:"She told that she was busy.",wrong:"told",fix:"said",hint:"told me / said that"}]},
+   {bad:"She told that she was busy.",wrong:"told",fix:"said",hint:"told me / said that"},
+   {bad:"He asked where did I live.",wrong:"did",fix:"(sil): where I lived",hint:"dolaylı soruda düz sıra"}]},
  G14:{transform:[
    {from:"A mechanic repaired my car.",to:"I had my car repaired.",hint:"have + nesne + V3"},
    {from:"A hairdresser cut her hair.",to:"She had her hair cut.",hint:"have + nesne + V3"}],
@@ -3161,10 +3325,31 @@ const GPLUS2={
    {from:"It was raining. We continued.",to:"Despite the rain, we continued.",hint:"despite + isim"}],
   spot:[
    {bad:"Despite it was cold, we went out.",wrong:"Despite",fix:"Although",hint:"despite + isim; although + cümle"},
-   {bad:"Although the rain, we went out.",wrong:"Although",fix:"Despite",hint:"although + cümle; despite + isim"}]}
+   {bad:"Although the rain, we went out.",wrong:"Although",fix:"Despite",hint:"although + cümle; despite + isim"},
+   {bad:"Despite of the rain, we went out.",wrong:"of",fix:"(sil): Despite the rain",hint:"despite of ✗ — despite tek başına"}]},
+ G16:{transform:[
+   {from:"He said something. It surprised me.",to:"What he said surprised me.",hint:"noun clause: What …"},
+   {from:"The man who is standing there is my uncle.",to:"The man standing there is my uncle.",hint:"kısaltma: who is → düşer"}],
+  spot:[
+   {bad:"I don't know where does he live.",wrong:"does",fix:"(sil): where he lives",hint:"dolaylı soruda düz sıra"},
+   {bad:"The car which parked outside is mine.",wrong:"which",fix:"(sil): parked (= which is parked)",hint:"pasif kısaltma → V3"}]}
 };
 function makeSpot(sp){const words=sp.bad.split(/\s+/);const norm=w=>w.replace(/[^A-Za-z']/g,'').toLowerCase();let idx=words.findIndex(w=>norm(w)===norm(sp.wrong));if(idx<0)idx=0;return {type:'spot',bad:sp.bad,words:words,badIdx:idx,wrong:sp.wrong,fix:sp.fix,hint:sp.hint};}
 function gapFromMC(q){if(!/_{2,}/.test(q.q))return null;const ans=q.opts[q.a];if(!ans||ans.length>16)return null;return {type:'gap',q:q.q,answer:ans,ex:q.ex,alts:[]};}
+/* Modülün TÜM çoktan seçmeli kaynakları tek havuzda (mini + test + plus + quiz + GMORE), metne göre tekilleştirilmiş */
+function moduleMCs(id){
+  const g=GRAMMAR.find(x=>x.id===id)||{};const det=GDET[id]||{};const plus=GRAMMAR_PLUS[id]||{};
+  const seen={},out=[];
+  [(det.mini||[]),(det.test||[]),(plus.test||[]),(g.quiz||[]),(GMORE[id]||[])].forEach(function(src){src.forEach(function(q){const h=srsHash(q.q);if(!seen[h]){seen[h]=1;out.push(q);}});});
+  return out;
+}
+/* TAZELİK SEÇİMİ: az sorulmuş soru önce gelir (SRS 'seen' sayacına göre) → her tekrarda farklı sorular */
+function freshPick(arr,n,gid){
+  return shuffle(arr.slice())
+    .map(function(it){const s=S.srs[srsIdRaw(it,gid)]||{};return {it:it,seen:s.seen||0,due:s.due||0};})
+    .sort(function(a,b){return (a.seen-b.seen)||(a.due-b.due);})
+    .slice(0,n).map(function(x){return x.it;});
+}
 
 /* ===== Faz 4: bağlam / diyalog (yapıyı anlamlı kullanımda gör) ===== */
 const GCTX={
@@ -3451,8 +3636,8 @@ function dueCount(){return dueSids().length;}
 /* Tüm modüllerdeki soruları sid'leriyle indeksle (tekrar kuyruğunu yeniden kurmak için) */
 function reviewIndex(){
   const arr=[],seen={};
-  GRAMMAR.forEach(g=>{const id=g.id,det=GDET[id]||{},plus=GRAMMAR_PLUS[id]||{},p2=GPLUS2[id]||{};
-    const mcs=(det.mini||g.quiz||[]).concat(det.test||plus.test||[]);
+  GRAMMAR.forEach(g=>{const id=g.id,p2=GPLUS2[id]||{};
+    const mcs=moduleMCs(id);
     mcs.forEach(q=>{const sid=id+'|mc|'+srsHash(q.q);if(!seen[sid]){seen[sid]=1;arr.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex,mod:id,_sid:sid});}});
     mcs.forEach(q=>{const ga=gapFromMC(q);if(ga){const sid=id+'|gp|'+srsHash(q.q);if(!seen[sid]){seen[sid]=1;arr.push(Object.assign({mod:id,_sid:sid},ga));}}});
     lessonSents(id).filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;}).forEach(s=>{const sid=id+'|bd|'+srsHash(s.en);if(!seen[sid]){seen[sid]=1;arr.push({type:'build',tr:s.tr,answer:s.en,mod:id,_sid:sid});}});
@@ -3535,21 +3720,27 @@ function buildLesson(id){
   const ctx=GCTX[id];
   if(ctx&&ctx.lines&&ctx.lines.length)items.push({type:'context',lines:ctx.lines,focus:ctx.focus,rule:strip(g.summary)});
   const sents=lessonSents(id);
-  const mcPool=shuffle((det.mini||g.quiz||[]).concat(det.test||plus.test||[]));
+  // BÜYÜK HAVUZ + TAZELİK: tüm kaynaklar birleşik; az sorulmuş sorular öncelikli → her tekrar farklı
+  const mcAll=moduleMCs(id).map(q=>({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex}));
   // 1) TANIMA (kolay): çoktan seçmeli + eşleştirme
   const easy=[];
-  mcPool.slice(0,6).forEach(q=>easy.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex}));
+  const mcSel=freshPick(mcAll,6,id);
+  mcSel.forEach(q=>easy.push(q));
   const matchable=shuffle(sents.filter(s=>s.en.split(/\s+/).length<=6)).slice(0,4);
   if(matchable.length>=3)easy.push({type:'match',pairs:matchable});
-  // 2) HATIRLAMA (orta): boşluğa kelimeyi YAZ (Cloze pratiği)
+  // 2) HATIRLAMA (orta): boşluğa kelimeyi YAZ (Cloze pratiği) — MC'de sorulmayanlardan seç
   const mid=[];
-  shuffle(mcPool.filter(q=>/_{2,}/.test(q.q))).slice(0,2).forEach(q=>{const ga=gapFromMC(q);if(ga)mid.push(ga);});
+  const usedQ={};mcSel.forEach(q=>usedQ[srsHash(q.q)]=1);
+  const gapCands=mcAll.filter(q=>!usedQ[srsHash(q.q)]).map(q=>gapFromMC(q)).filter(Boolean);
+  freshPick(gapCands,3,id).forEach(ga=>mid.push(ga));
   // 3) ÜRETİM (zor): cümle kurma + dinleme + dönüştürme (Closest Meaning) + hata bulma
   const hard=[];
-  shuffle(sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;})).slice(0,3).forEach(s=>hard.push({type:'build',tr:s.tr,answer:s.en}));
-  shuffle(sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=8;})).slice(0,2).forEach(s=>hard.push({type:'listen',tr:s.tr,answer:s.en}));
-  shuffle((p2.transform||[]).slice()).slice(0,2).forEach(t=>hard.push({type:'transform',from:t.from,answer:t.to,hint:t.hint}));
-  shuffle((p2.spot||[]).slice()).slice(0,2).forEach(sp=>hard.push(makeSpot(sp)));
+  const sentPool=sents.filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;}).map(s=>({type:'build',tr:s.tr,answer:s.en}));
+  const sentSel=freshPick(sentPool,5,id);
+  sentSel.slice(0,3).forEach(s=>hard.push(s));
+  sentSel.slice(3,5).forEach(s=>hard.push({type:'listen',tr:s.tr,answer:s.answer}));
+  freshPick((p2.transform||[]).map(t=>({type:'transform',from:t.from,answer:t.to,hint:t.hint})),2,id).forEach(t=>hard.push(t));
+  freshPick((p2.spot||[]).map(sp=>makeSpot(sp)),2,id).forEach(sp=>hard.push(sp));
   // sırayı kademeli kur: kolay → orta → zor
   shuffle(easy).forEach(x=>items.push(x));
   shuffle(mid).forEach(x=>items.push(x));
@@ -3562,9 +3753,9 @@ function buildReviewLesson(){
   const doneIds=GRAMMAR.filter(g=>S.gram[g.id]).map(g=>g.id);
   const pool=[];
   doneIds.forEach(function(id){
-    const det=GDET[id]||{};const plus=GRAMMAR_PLUS[id]||{};
-    (det.mini||[]).concat(det.test||plus.test||[]).forEach(q=>pool.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex,mod:id}));
-    shuffle(lessonSents(id).filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;})).slice(0,2).forEach(s=>pool.push({type:'build',tr:s.tr,answer:s.en,mod:id}));
+    // her modülden en az görülmüş sorular (tam havuzdan) → her tekrar farklı karışım
+    freshPick(moduleMCs(id).map(q=>({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex,mod:id})),4,id).forEach(q=>pool.push(q));
+    freshPick(lessonSents(id).filter(s=>{const w=s.en.split(/\s+/);return w.length>=3&&w.length<=9;}).map(s=>({type:'build',tr:s.tr,answer:s.en,mod:id})),2,id).forEach(s=>pool.push(s));
   });
   const items=[{type:'tip',title:'Karışık Tekrar 🔁',html:'Bitirdiğin <b>tüm konulardan</b> karışık sorular. Eski bilgini tazele — kalıcılığın sırrı düzenli tekrar!'}];
   shuffle(pool).slice(0,15).forEach(x=>items.push(x));
