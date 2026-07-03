@@ -3,6 +3,25 @@
 // Ana yol: GERÇEK FOTOĞRAF (Openverse + Wikipedia, anahtarsız, ücretsiz).
 // Yedek: Nano Banana (GEMINI_API_KEY + faturalandırma varsa) → Pollinations.
 
+// Pexels: temiz, ilgili stok fotoğraflar (ücretsiz anahtar gerekir → env PEXELS_KEY).
+async function pexelsUrls(env, term, dbg) {
+  const key = env.PEXELS_KEY;
+  if (!key) { if (dbg) dbg.push("no PEXELS_KEY"); return []; }
+  try {
+    const api = "https://api.pexels.com/v1/search?query=" + encodeURIComponent(term) + "&per_page=6&orientation=square";
+    const r = await fetch(api, { headers: { "Authorization": key } });
+    if (!r.ok) { if (dbg) dbg.push("pexels http " + r.status); return []; }
+    const d = await r.json();
+    const out = [];
+    for (const p of (d.photos || [])) {
+      const s = p.src || {};
+      if (s.large) out.push(s.large); else if (s.medium) out.push(s.medium);
+    }
+    if (dbg) dbg.push("pexels " + out.length + " aday");
+    return out;
+  } catch (e) { if (dbg) dbg.push("pexels threw: " + (e && e.message)); return []; }
+}
+
 // Openverse: anahtarsız CC fotoğraf araması. Aday küçük-resim URL'leri döndürür.
 async function openverseUrls(term, dbg) {
   try {
@@ -128,10 +147,11 @@ export async function onRequest(context) {
   if (sParam && /^\d+$/.test(sParam)) { seed = parseInt(sParam, 10) % 100000; }
   else { for (let i = 0; i < w.length; i++) seed = (seed * 31 + w.charCodeAt(i)) >>> 0; seed = seed % 100000; }
 
-  // 1) GERÇEK FOTOĞRAF — ana yol. Openverse + Wikipedia adayları, ilk çalışan döner.
+  // 1) GERÇEK FOTOĞRAF — ana yol. Kalite sırası: Pexels → Wikipedia → Openverse.
   const photoCandidates = [].concat(
-    await openverseUrls(w, dbg),
-    await wikiUrls(w, dbg)
+    await pexelsUrls(env, w, dbg),
+    await wikiUrls(w, dbg),
+    await openverseUrls(w, dbg)
   );
   // Seed'e göre biraz çeşitlilik (aynı kelimeye "farklı görsel" için)
   if (seed && photoCandidates.length > 1) {
