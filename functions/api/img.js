@@ -89,6 +89,36 @@ async function imageFromGemini(env, prompt, dbg) {
   return null;
 }
 
+// Kelimeyi en iyi anlatan KISA fotoğraf-arama sorgusu (2-5 kelime).
+// Somut kelimeler için kelimenin kendisi; soyut kelimeler için somut sahne.
+async function searchQueryFromGemini(env, w, t, dbg) {
+  const key = env.GEMINI_API_KEY;
+  if (!key) return null;
+  const body = {
+    contents: [{ parts: [{ text:
+      "You pick a stock-photo search query that best teaches the meaning of an English word.\n" +
+      "Word: \"" + w + "\"" + (t ? (" (Turkish: " + t + ")") : "") + "\n" +
+      "Return ONLY a 2-5 word English search phrase of CONCRETE, photographable things that clearly show this word's meaning. " +
+      "If the word is already a concrete object, return the word itself. " +
+      "If it is abstract/adjective/verb, return a concrete scene that depicts it (e.g. comfortable -> person relaxing on cozy sofa; honest -> friendly handshake). " +
+      "No quotes, no punctuation, no explanation."
+    }] }],
+    generationConfig: { temperature: 0.3 }
+  };
+  for (const m of ["gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash"]) {
+    try {
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + m + ":generateContent?key=" + encodeURIComponent(key),
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const d = await r.json();
+      if (d.error) continue;
+      let txt = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts &&
+        d.candidates[0].content.parts.map(function (p) { return p.text || ""; }).join("").trim();
+      if (txt) { txt = txt.replace(/["'.\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60); if (dbg) dbg.push("query('" + w + "') -> " + txt + " [" + m + "]"); return txt; }
+    } catch (e) {}
+  }
+  return null;
+}
+
 // Somut sahne cümlesi (Pollinations yedeği için).
 async function sceneFromGemini(env, w, t) {
   const key = env.GEMINI_API_KEY;
@@ -147,11 +177,18 @@ export async function onRequest(context) {
   if (sParam && /^\d+$/.test(sParam)) { seed = parseInt(sParam, 10) % 100000; }
   else { for (let i = 0; i < w.length; i++) seed = (seed * 31 + w.charCodeAt(i)) >>> 0; seed = seed % 100000; }
 
+  // Gemini kelimeyi en iyi anlatan somut arama sorgusuna çevirir (soyut kelimeler için kritik).
+  let q = w;
+  try { const gq = await searchQueryFromGemini(env, w, t, dbg); if (gq) q = gq; } catch (e) {}
+
   // 1) GERÇEK FOTOĞRAF — ana yol. Kalite sırası: Pexels → Wikipedia → Openverse.
+  // Önce akıllı sorgu (q); Pexels'te sonuç boşsa ham kelimeye (w) düşülür.
+  let pex = await pexelsUrls(env, q, dbg);
+  if (!pex.length && q !== w) pex = await pexelsUrls(env, w, dbg);
   const photoCandidates = [].concat(
-    await pexelsUrls(env, w, dbg),
+    pex,
     await wikiUrls(w, dbg),
-    await openverseUrls(w, dbg)
+    await openverseUrls(q, dbg)
   );
   // Seed'e göre biraz çeşitlilik (aynı kelimeye "farklı görsel" için)
   if (seed && photoCandidates.length > 1) {
