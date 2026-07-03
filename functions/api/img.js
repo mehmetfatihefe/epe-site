@@ -1,8 +1,46 @@
 // Cloudflare Pages Function — kelime görseli (edge'de çalışır, Türkiye kısıtını aşar).
 // /api/img?w=<ingilizce>&t=<turkce>[&s=<seed>] → görsel bytes döner.
-// GEMINI_API_KEY: kelimeyi anlatan görsel sahneyi üretmek için (varsa; /api/gemini ile aynı).
-// POLLINATIONS_KEY: isteğe bağlı (yoksa anahtarsız CDN denenir).
+// GEMINI_API_KEY: 1) Nano Banana (Gemini görsel modeli) ile görseli DOĞRUDAN üretir;
+//                 2) olmazsa kelimeyi anlatan sahne metnini üretip Pollinations'a verir.
+// POLLINATIONS_KEY: isteğe bağlı yedek (yoksa anahtarsız CDN denenir).
 
+// base64 → Uint8Array (edge'de atob mevcut)
+function b64ToBytes(b64) {
+  const bin = atob(b64);
+  const len = bin.length;
+  const out = new Uint8Array(len);
+  for (let i = 0; i < len; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+// Nano Banana = Google Gemini görsel modeli. Görseli DOĞRUDAN üretir.
+async function imageFromGemini(env, prompt) {
+  const key = env.GEMINI_API_KEY;
+  if (!key) return null;
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { responseModalities: ["IMAGE"] }
+  };
+  const models = ["gemini-2.5-flash-image", "gemini-2.5-flash-image-preview", "gemini-2.0-flash-preview-image-generation"];
+  for (const m of models) {
+    try {
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + m + ":generateContent?key=" + encodeURIComponent(key),
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const d = await r.json();
+      if (d.error) continue;
+      const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
+      if (!parts) continue;
+      for (const p of parts) {
+        if (p.inlineData && p.inlineData.data) {
+          return { bytes: b64ToBytes(p.inlineData.data), mime: p.inlineData.mimeType || "image/png" };
+        }
+      }
+    } catch (e) { /* sıradaki model */ }
+  }
+  return null;
+}
+
+// Görseli Pollinations metin-görsel modelinden üretmek için somut sahne cümlesi.
 async function sceneFromGemini(env, w, t) {
   const key = env.GEMINI_API_KEY;
   if (!key) return null;
@@ -50,8 +88,24 @@ export async function onRequest(context) {
   let scene = null;
   try { scene = await sceneFromGemini(env, w, t); } catch (e) {}
   const subject = scene || (t ? (t + ", " + w) : w);
-  const prompt = subject + ". Clean modern flat vector illustration, clear composition, distinct well-separated subjects with correct anatomy, soft colors, plain white background. No text, no words, no letters, no captions.";
 
+  // 1) EN İYİ: Nano Banana (Gemini) görseli doğrudan üretir — edge'de, kısıt yok.
+  try {
+    const gimg = await imageFromGemini(env,
+      subject + ". A clean modern flat vector illustration, single clear composition, distinct well-separated subjects with correct anatomy, soft friendly colors, plain white background. No text, no words, no letters, no captions."
+    );
+    if (gimg) {
+      const resp = new Response(gimg.bytes, { status: 200, headers: {
+        "Content-Type": gimg.mime,
+        "Cache-Control": "public, max-age=31536000, immutable"
+      } });
+      context.waitUntil(cache.put(cacheKey, resp.clone()));
+      return resp;
+    }
+  } catch (e) { /* Pollinations'a düş */ }
+
+  // 2) YEDEK: Pollinations metin-görsel modelleri
+  const prompt = subject + ". Clean modern flat vector illustration, clear composition, distinct well-separated subjects with correct anatomy, soft colors, plain white background. No text, no words, no letters, no captions.";
   const enc = encodeURIComponent(prompt);
   const qs = "width=512&height=512&seed=" + seed;
   const key = env.POLLINATIONS_KEY;
