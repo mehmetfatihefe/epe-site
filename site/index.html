@@ -298,6 +298,16 @@
   .ctxen{font-size:16px;line-height:1.55}
   .ctxtr{color:var(--muted);font-size:13px;margin-top:2px}
   .ctxhl{background:var(--amber-soft);border-bottom:2px solid var(--amber);border-radius:4px;padding:0 3px;cursor:pointer;font-weight:600}
+  .gtab{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0}
+  .gtab th{background:var(--surface);border:1px solid var(--line);padding:7px 9px;text-align:left;font-size:12px;letter-spacing:.4px;color:var(--muted)}
+  .gtab td{border:1px solid var(--line);padding:7px 9px;vertical-align:top;line-height:1.5}
+  .gtab tr td:first-child{font-weight:700;white-space:nowrap}
+  .sigchip{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 10px;margin:3px 3px 0 0;font-size:12.5px}
+  .sigchip b{color:var(--green)}
+  .trapbox{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;background:var(--surface)}
+  .trapbad{color:var(--red);font-weight:600;font-size:15px}
+  .trapgood{color:var(--green);font-weight:700;font-size:15px;margin-top:2px}
+  .trapwhy{color:var(--muted);font-size:12.5px;margin-top:4px}
   .build-answer{min-height:52px;border-bottom:2px dashed var(--line);display:flex;flex-wrap:wrap;gap:8px;padding:8px 0 14px;margin-bottom:18px;align-content:flex-start}
   .build-bank{display:flex;flex-wrap:wrap;gap:8px}
   .chip{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 13px;font-size:16px;cursor:pointer;box-shadow:0 2px 0 var(--line);user-select:none}
@@ -3076,6 +3086,7 @@ function renderGrammar(){
       <div class="ring">${badge||g.id.replace('G','')}</div>
       <div class="si"><div class="st">${esc(g.title)} <span class="lvl ${lvlClass(g.lvl)}">${g.lvl}</span></div>
         <div class="sd">${sub}</div></div>
+      <button class="go" style="padding:8px 10px;margin-right:6px" title="Konu kitapçığı" onclick="event.stopPropagation();openGramBook('${g.id}')">📖</button>
       <button class="go" onclick="event.stopPropagation();startGrammarLesson('${g.id}')">${m.level>=1?'Tekrar':'Başla'}</button>
     </div>`;
   }).join("");
@@ -3216,6 +3227,188 @@ const GCTX={
    {en:"I'm not sure [[whether]] it's true.",tr:"Doğru mu emin değilim."}]}
 };
 
+/* ===== Konu anlatımı PRO katmanı: özet tablo + sinyal kelimeler + sınav tuzakları ===== */
+const GEXTRA={
+ G01:{table:{title:"to be + there is/are + a/an/the",head:["Yapı","Ne zaman?","Örnek"],rows:[
+   ["am","özne I ise","I <b>am</b> ready."],
+   ["is","he / she / it","She <b>is</b> a nurse."],
+   ["are","you / we / they","They <b>are</b> late."],
+   ["there is","tekil “var”","There <b>is</b> a bank here."],
+   ["there are","çoğul “var”","There <b>are</b> two banks."],
+   ["a / an","ilk kez geçen tekil isim","I saw <b>a</b> cat / <b>an</b> owl."],
+   ["the","ikisinin de bildiği şey","<b>The</b> cat was black."]]},
+  signals:[{w:"tekil isim",use:"there is / a-an"},{w:"çoğul isim (-s)",use:"there are / are"},{w:"daha önce bahsedildi",use:"the"}],
+  traps:[
+   {bad:"He are happy.",good:"He is happy.",why:"he/she/it her zaman is alır."},
+   {bad:"There is two books.",good:"There are two books.",why:"Sayı 2+ ise çoğul → there are."},
+   {bad:"I have car.",good:"I have a car.",why:"Sayılabilir tekil isim yalın kalamaz; a/an/the ister."}]},
+ G02:{table:{title:"Present Simple × Present Continuous",head:["","Present Simple","Present Continuous"],rows:[
+   ["Anlam","alışkanlık, genel doğru","şu an, geçici durum"],
+   ["Yapı","V1 (3.tekilde <b>-s</b>)","am/is/are + V<b>-ing</b>"],
+   ["Sinyal","every day, usually, always, never","now, right now, at the moment, Look!, Listen!"],
+   ["Örnek","He <b>works</b> in a bank.","He <b>is working</b> from home this week."]]},
+  signals:[{w:"every day / usually / always",use:"Present Simple"},{w:"now / at the moment / Look!",use:"Present Continuous"},{w:"know, like, want, believe, understand",use:"durum fiili → sadece Simple"}],
+  traps:[
+   {bad:"He go to school.",good:"He goes to school.",why:"3. tekil şahısta fiile -s eklenir."},
+   {bad:"I am knowing the answer.",good:"I know the answer.",why:"Durum fiilleri (know, like, want…) continuous olmaz."},
+   {bad:"Does she likes tea?",good:"Does she like tea?",why:"does zaten -s taşır; fiil yalın kalır."}]},
+ G03:{table:{title:"Geçmiş zamanın 3 aracı",head:["Yapı","Ne zaman?","Örnek"],rows:[
+   ["Past Simple","bitmiş olay, belirli zaman","She <b>bought</b> a car last year."],
+   ["Past Continuous","arka planda sürmekte olan","I <b>was sleeping</b> when you called."],
+   ["used to + V1","geçmiş alışkanlık (artık yok)","We <b>used to</b> live in İzmir."]]},
+  signals:[{w:"yesterday / ago / last … / in 1990",use:"Past Simple"},{w:"while / when + kesinti",use:"Past Continuous"},{w:"eskiden… (artık değil)",use:"used to"}],
+  traps:[
+   {bad:"Did you went there?",good:"Did you go there?",why:"did zaten geçmişi taşır; fiil yalın kalır."},
+   {bad:"We used to went there.",good:"We used to go there.",why:"used to + yalın fiil."},
+   {bad:"While I slept, the phone rang.",good:"While I was sleeping, the phone rang.",why:"while + süren eylem → Past Continuous."}]},
+ G04:{table:{title:"Gelecek: will × going to × Present Continuous",head:["Yapı","Ne zaman?","Örnek"],rows:[
+   ["will","anlık karar, söz, tahmin","I<b>'ll</b> answer it. / I think he <b>will</b> win."],
+   ["be going to","önceden plan, kanıta dayalı tahmin","Look at the clouds! It<b>'s going to</b> rain."],
+   ["Pres. Continuous","ayarlanmış randevu/plan","I<b>'m meeting</b> Sara at five."],
+   ["Pres. Simple","tarife/program (tren, ders)","The train <b>leaves</b> at nine."]]},
+  signals:[{w:"I think / probably / promise",use:"will"},{w:"gözle görülür kanıt",use:"going to"},{w:"takvime yazılmış buluşma",use:"Present Continuous"}],
+  traps:[
+   {bad:"When I will arrive, I'll call you.",good:"When I arrive, I'll call you.",why:"when/if/before/after zaman cümlesinde will kullanılmaz."},
+   {bad:"Look at the clouds! It will rain.",good:"It is going to rain.",why:"Kanıt varken going to daha doğru (sınav bunu sorar)."}]},
+ G05:{table:{title:"Modal haritası",head:["Modal","Anlam","Örnek"],rows:[
+   ["can / could","yetenek, olasılık, rica","She <b>can</b> swim. <b>Could</b> you help?"],
+   ["must","zorunluluk / mantıksal çıkarım","You <b>must</b> stop. / He <b>must</b> be tired."],
+   ["have to","(dış) zorunluluk","I <b>have to</b> wear a uniform."],
+   ["mustn't","YASAK","You <b>mustn't</b> smoke here."],
+   ["don't have to","gerek YOK","You <b>don't have to</b> pay."],
+   ["should / ought to","tavsiye","You <b>should</b> rest."],
+   ["had better","güçlü uyarı (+ yalın fiil)","You<b>'d better</b> hurry."],
+   ["may / might","olasılık","It <b>might</b> rain."]]},
+  signals:[{w:"yasak / tehlike",use:"mustn't"},{w:"serbest, gerekli değil",use:"don't have to"},{w:"kesin çıkarım (ipucu var)",use:"must be"},{w:"“-se iyi olur, yoksa…”",use:"had better"}],
+  traps:[
+   {bad:"You must to go now.",good:"You must go now.",why:"Modal fiillerden sonra to gelmez (ought to hariç)."},
+   {bad:"You had better to see a doctor.",good:"You had better see a doctor.",why:"had better + yalın fiil. (Sınavda çıktı!)"},
+   {bad:"It's free, you mustn't pay.",good:"It's free, you don't have to pay.",why:"mustn't = yasak; “gerek yok” = don't have to."}]},
+ G06:{table:{title:"Karşılaştırma yapıları",head:["Yapı","Kalıp","Örnek"],rows:[
+   ["Comparative","kısa sıfat + <b>-er</b> than / <b>more</b> + uzun sıfat + than","hotter than / more advanced than"],
+   ["Superlative","the + <b>-est</b> / the <b>most</b> …","the hottest / the most advanced"],
+   ["Eşitlik","<b>as</b> + sıfat + <b>as</b>","She is <b>as tall as</b> her brother."],
+   ["Azlık","<b>less</b> + sıfat + than","<b>less advanced than</b> today's games"],
+   ["Çifte artış","<b>The</b> + comp …, <b>the</b> + comp …","<b>The more</b> you practise, <b>the better</b> you get."],
+   ["Düzensiz","good→better→best · bad→worse→worst · far→further","This is <b>worse</b>."]]},
+  signals:[{w:"than",use:"comparative"},{w:"the … -est / most",use:"superlative"},{w:"as … as",use:"eşitlik"}],
+  traps:[
+   {bad:"This phone is more better.",good:"This phone is better.",why:"better zaten comparative; more eklenmez."},
+   {bad:"advanceder",good:"more advanced",why:"2+ heceli sıfatlar more/most alır."},
+   {bad:"She is as tall than me.",good:"She is as tall as me.",why:"as … as kalıbı bozulmaz."}]},
+ G07:{table:{title:"Sayılabilir mi, sayılamaz mı?",head:["","Sayılabilir (books)","Sayılamayan (water)"],rows:[
+   ["çok","<b>many</b> books","<b>much</b> water"],
+   ["az (yeterli)","<b>a few</b> books","<b>a little</b> water"],
+   ["az (yetersiz!)","<b>few</b> friends","<b>little</b> hope"],
+   ["bol","plenty of / a lot of books","plenty of / a lot of water"],
+   ["soru","How <b>many</b>…?","How <b>much</b>…?"]]},
+  signals:[{w:"isim -s almış (çoğul)",use:"many / few / a few"},{w:"water, money, time, information",use:"much / little / a little"},{w:"olumlu bolluk",use:"plenty of"}],
+  traps:[
+   {bad:"much books",good:"many books",why:"much sayılamayanla kullanılır; books sayılabilir."},
+   {bad:"a few money",good:"a little money",why:"money sayılamaz → a little."},
+   {bad:"I have few money.",good:"I have little money.",why:"few sayılabilir içindir; ayrıca few/little = 'neredeyse yok' (olumsuz)."}]},
+ G08:{table:{title:"Fiilden sonra ne gelir?",head:["Grup","Fiiller","Örnek"],rows:[
+   ["+ V-ing","enjoy, avoid, finish, mind, keep, suggest, practise","I enjoy <b>reading</b>."],
+   ["+ to V","want, decide, hope, plan, promise, agree, refuse","She decided <b>to leave</b>."],
+   ["+ nesne + to V","want, ask, tell, expect, allow <b>sb to do</b>","I want <b>you to come</b>."],
+   ["+ nesne + V1","make, let (+ help)","It made me <b>cry</b>. / Let him <b>go</b>."],
+   ["edat + V-ing","good at, interested in, tired of…","good at <b>swimming</b>"]]},
+  signals:[{w:"edattan sonra (in/at/of/for)",use:"daima V-ing"},{w:"make / let",use:"yalın fiil (to yok)"}],
+  traps:[
+   {bad:"The film made me to cry.",good:"The film made me cry.",why:"make + nesne + yalın fiil. (Cloze'da çıktı!)"},
+   {bad:"I enjoy to read.",good:"I enjoy reading.",why:"enjoy + V-ing grubundandır."},
+   {bad:"I'm interested in to learn.",good:"I'm interested in learning.",why:"Edat (in) sonrası daima -ing."}]},
+ G09:{table:{title:"so / such / too / enough",head:["Yapı","Kalıp","Örnek"],rows:[
+   ["so","<b>so</b> + sıfat/zarf (+ that)","It was <b>so cold that</b> the lake froze."],
+   ["such","<b>such</b> (+a/an) + sıfat + İSİM (+ that)","It was <b>such a good film that</b>…"],
+   ["too","<b>too</b> + sıfat = gereğinden FAZLA (olumsuz)","The tea is <b>too hot</b> to drink."],
+   ["enough","sıfat + <b>enough</b> · <b>enough</b> + isim","old <b>enough</b> · <b>enough</b> money"]]},
+  signals:[{w:"boşluktan sonra İSİM var",use:"such"},{w:"sadece sıfat/zarf",use:"so"},{w:"olumsuz aşırılık",use:"too"}],
+  traps:[
+   {bad:"It was so good film.",good:"It was such a good film.",why:"İsim varsa such; so yalnız sıfat/zarf alır."},
+   {bad:"He is enough old to drive.",good:"He is old enough to drive.",why:"enough sıfattan SONRA gelir."},
+   {bad:"This tea is too delicious!",good:"This tea is really delicious!",why:"too olumsuzdur (aşırı); övgüde kullanılmaz."}]},
+ G10:{table:{title:"İlgi zamiri seçimi",head:["Zamir","Neyi anlatır?","Örnek"],rows:[
+   ["who","kişi (özne)","the man <b>who</b> called"],
+   ["which / that","şey, hayvan","the book <b>that</b> I read"],
+   ["whose","İYELİK (kişinin/şeyin …-i)","the writer <b>whose</b> novel won"],
+   ["where","yer","the town <b>where</b> I was born"],
+   ["when","zaman","the day <b>when</b> we met"]]},
+  signals:[{w:"boşluktan sonra İSİM (iyelik)",use:"whose"},{w:"virgül var (non-defining)",use:"which/who — that YASAK"},{w:"yer + eksiksiz cümle",use:"where"}],
+  traps:[
+   {bad:"The writer who's novel won…",good:"The writer whose novel won…",why:"who's = who is; iyelik whose."},
+   {bad:"My phone, that is new, broke.",good:"My phone, which is new, broke.",why:"Virgüllü (non-defining) cümlede that kullanılmaz."},
+   {bad:"The hotel which we stayed was nice.",good:"The hotel where we stayed was nice.",why:"stayed nesnesiz tam cümle → where."}]},
+ G11:{table:{title:"Edilgen çatı: be + V3 (zaman be'de)",head:["Zaman","Edilgen","Örnek"],rows:[
+   ["Present","am/is/are + V3","English <b>is spoken</b> here."],
+   ["Past","was/were + V3","The bridge <b>was built</b> in 1990."],
+   ["Perfect","has/have been + V3","The work <b>has been done</b>."],
+   ["Continuous","is/are being + V3","The road <b>is being repaired</b>."],
+   ["Future","will be + V3","It <b>will be finished</b> soon."],
+   ["Modal","can/must be + V3","It <b>can be seen</b> from here."]]},
+  signals:[{w:"eylemi yapan belirsiz/önemsiz",use:"edilgen"},{w:"by + kişi",use:"edilgende yapan"},{w:"nesne başa geçmiş",use:"edilgen"}],
+  traps:[
+   {bad:"The bridge was build in 1990.",good:"The bridge was built in 1990.",why:"V3 sabittir (build→built); zamanı be taşır."},
+   {bad:"This song is listened by millions.",good:"This song is listened to by millions.",why:"listen TO — edatlı fiillerde edat düşmez."},
+   {bad:"The room cleaning every day.",good:"The room is cleaned every day.",why:"Edilgen = be + V3; be atlanamaz."}]},
+ G12:{table:{title:"Koşul tipleri (sınavın kalbi ⭐)",head:["Tip","if-cümlesi","ana cümle","Anlam"],rows:[
+   ["0","present","present","genel doğru: If you heat ice, it <b>melts</b>."],
+   ["1","present","<b>will</b> + V1","gerçek gelecek: If it rains, we <b>will stay</b>."],
+   ["2","past (<b>were</b>)","<b>would</b> + V1","hayali şimdi: If I <b>were</b> rich, I <b>would travel</b>."],
+   ["3","<b>had</b> + V3","would <b>have</b> + V3","geçmiş pişmanlık: If she <b>had studied</b>, she <b>would have passed</b>."],
+   ["Mixed","had + V3","would + V1","geçmiş neden → şimdiki sonuç"]]},
+  signals:[{w:"unless",use:"= if not"},{w:"provided that / as long as",use:"= if (şartıyla)"},{w:"ana cümlede would have V3",use:"Type 3"},{w:"if I were you",use:"Type 2 tavsiye"}],
+  traps:[
+   {bad:"If I will see her, I'll tell her.",good:"If I see her, I'll tell her.",why:"if-cümlesinde will kullanılmaz."},
+   {bad:"If I was you, I would wait.",good:"If I were you, I would wait.",why:"Type 2'de tüm şahıslar were."},
+   {bad:"If she had studied, she would pass.",good:"…she would have passed.",why:"Type 3'ün iki tarafı da geçmiş: would HAVE V3. (Closest Meaning'in 1 numaralı tuzağı)"}]},
+ G13:{table:{title:"Backshift: aktarırken bir geri kay",head:["Doğrudan","Dolaylı"],rows:[
+   ["am / is / are","was / were"],
+   ["V1 (work)","V2 (worked)"],
+   ["will","would"],["can","could"],["must","had to"],
+   ["V2 (saw)","had + V3 (had seen)"],
+   ["today / tomorrow / yesterday","that day / the next day / the day before"],
+   ["here / this","there / that"]]},
+  signals:[{w:"nesne var (bana/ona)",use:"tell (told me)"},{w:"nesne yok",use:"say (said that)"},{w:"yes/no soru aktarımı",use:"asked if/whether"}],
+  traps:[
+   {bad:"He said me that he was late.",good:"He told me that he was late.",why:"say nesne almaz; tell + nesne zorunlu."},
+   {bad:"She asked where did I live.",good:"She asked where I lived.",why:"Aktarılan soruda düz cümle sırası; did düşer."},
+   {bad:"He said he will come.",good:"He said he would come.",why:"Backshift: will → would."}]},
+ G14:{table:{title:"Yaptırma yapıları",head:["Kalıp","Anlam","Örnek"],rows:[
+   ["have sth <b>done</b>","işi başkasına yaptırmak","I <b>had my car repaired</b>."],
+   ["get sth <b>done</b>","= have sth done (günlük)","She <b>got her hair cut</b>."],
+   ["make sb <b>V1</b>","zorlamak","She <b>made him apologize</b>."],
+   ["let sb <b>V1</b>","izin vermek","They <b>let us go</b> early."],
+   ["get sb <b>to V</b>","ikna etmek","I <b>got him to help</b> me."],
+   ["help sb <b>(to) V</b>","yardım etmek","Help me <b>(to) carry</b> this."]]},
+  signals:[{w:"işi kendim yapmadım",use:"have/get + nesne + V3"},{w:"zorlama",use:"make + V1"},{w:"ikna",use:"get + to V"}],
+  traps:[
+   {bad:"I had cut my hair.",good:"I had my hair cut.",why:"Sıra: have + NESNE + V3 — yoksa 'kendim kestim' olur."},
+   {bad:"She made him to apologize.",good:"She made him apologize.",why:"make'ten sonra to gelmez."},
+   {bad:"I got my brother help me.",good:"I got my brother to help me.",why:"get sb TO do — to zorunlu."}]},
+ G15:{table:{title:"Bağlaç haritası (Paragraf sorularının anahtarı)",head:["İşlev","+ tam cümle","+ isim / V-ing","noktadan sonra"],rows:[
+   ["Zıtlık","although, though, even though, while, whereas","despite, in spite of","However, / Nevertheless, / On the other hand,"],
+   ["Sebep","because, since, as","because of, due to","—"],
+   ["Sonuç","so","—","Therefore, / Thus, / Consequently, / As a result,"],
+   ["Ekleme","and","—","Moreover, / Furthermore, / In addition,"]]},
+  signals:[{w:"boşluktan sonra özne+fiil (cümle)",use:"although / because"},{w:"boşluktan sonra isim/-ing",use:"despite / because of"},{w:"iki cümle arası nokta/noktalı virgül",use:"However / Therefore"}],
+  traps:[
+   {bad:"Despite it was cold, we went out.",good:"Although it was cold, we went out.",why:"despite cümle alamaz; isim/-ing alır."},
+   {bad:"Although the rain, we went out.",good:"Despite the rain, we went out.",why:"although tam cümle ister."},
+   {bad:"He was tired. Moreover, he continued.",good:"He was tired. However, he continued.",why:"Anlam zıtlık; moreover ekleme yapar. Bağlacı ANLAMA göre seç."}]},
+ G16:{table:{title:"İsim cümlecikleri + kısaltma",head:["Yapı","Ne zaman?","Örnek"],rows:[
+   ["that + cümle","düz bilgi","I know <b>that</b> he is right."],
+   ["whether / if","yes-no belirsizliği","I wonder <b>whether</b> it's true."],
+   ["what / why / where…","wh- bilgisi","<b>What he said</b> was true."],
+   ["V-ing kısaltması","aktif: who is → Ø","the man <b>standing</b> there (= who is standing)"],
+   ["V3 kısaltması","pasif: which is → Ø","the car <b>parked</b> outside (= which is parked)"]]},
+  signals:[{w:"…-ip …-mediği (belirsizlik)",use:"whether / if"},{w:"özne pozisyonunda 'söylediği şey'",use:"What …"},{w:"isimden hemen sonra V-ing/V3",use:"kısaltılmış ilgi cümlesi"}],
+  traps:[
+   {bad:"I wonder that he will come.",good:"I wonder whether he will come.",why:"wonder belirsizlik ister → whether/if."},
+   {bad:"The man stands there is my uncle.",good:"The man standing there is my uncle.",why:"İki çekimli fiil çarpışır; kısaltma → standing."},
+   {bad:"The car parking outside is mine.",good:"The car parked outside is mine.",why:"Araba park EDİLMİŞ (pasif) → V3."}]}
+};
+
 /* ============================== ARALIKLI TEKRAR (SRS) + HATA DEFTERİ ============================== */
 function srsHash(s){let h=5381;s=String(s);for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return (h>>>0).toString(36);}
 function srsIdFor(it){const gid=it.mod||LSN.id;if(!gid||gid.indexOf('__')===0)return it.mod?srsIdRaw(it,it.mod):null;return srsIdRaw(it,gid);}
@@ -3322,8 +3515,15 @@ function buildLesson(id){
   const exPool=[];(det.lesson||[]).forEach(s=>(s.ex||[]).forEach(e=>exPool.push(e)));
   const noticeEx=(exPool.length?exPool:(GBANK[id]||[])).slice(0,3);
   if(noticeEx.length>=2)items.push({type:'notice',title:g.title,ex:noticeEx,q:'Aşağıdaki örnekleri oku — ortak kalıbı/kuralı fark edebiliyor musun? 🤔'});
-  // 1) KURAL
-  items.push({type:'tip',title:g.title,html:((det.lesson||[]).slice(0,3).map(s=>'<b>'+s.h+'</b><br>'+s.p).join('<br><br>')||g.summary)+'<br><br>⚠️ '+g.mistake});
+  // 1) KONU ANLATIMI: her bölüm örnekleriyle AYRI sayfa (kırpma yok)
+  const secs=det.lesson||[];
+  if(secs.length)secs.forEach((s,si)=>items.push({type:'teach',title:g.title,idx:si+1,tot:secs.length,h:s.h,p:s.p,ex:s.ex||[]}));
+  else items.push({type:'tip',title:g.title,html:g.summary+'<br><br>⚠️ '+g.mistake});
+  // 1b) ÖZET TABLO + sinyal kelimeler
+  const ext=GEXTRA[id]||{};
+  if(ext.table)items.push({type:'gtable',title:g.title,table:ext.table,signals:ext.signals||[]});
+  // 1c) SINAV TUZAKLARI (✗ → ✓ + neden)
+  if(ext.traps&&ext.traps.length)items.push({type:'traps',title:g.title,traps:ext.traps});
   // 2) BAĞLAM: yapıyı gerçek bir konuşmada gör
   const ctx=GCTX[id];
   if(ctx&&ctx.lines&&ctx.lines.length)items.push({type:'context',lines:ctx.lines,focus:ctx.focus,rule:strip(g.summary)});
@@ -3331,7 +3531,7 @@ function buildLesson(id){
   const mcPool=shuffle((det.mini||g.quiz||[]).concat(det.test||plus.test||[]));
   // 1) TANIMA (kolay): çoktan seçmeli + eşleştirme
   const easy=[];
-  mcPool.slice(0,8).forEach(q=>easy.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex}));
+  mcPool.slice(0,6).forEach(q=>easy.push({type:'mc',q:q.q,opts:q.opts,a:q.a,ex:q.ex}));
   const matchable=shuffle(sents.filter(s=>s.en.split(/\s+/).length<=6)).slice(0,4);
   if(matchable.length>=3)easy.push({type:'match',pairs:matchable});
   // 2) HATIRLAMA (orta): boşluğa kelimeyi YAZ (Cloze pratiği)
@@ -3371,6 +3571,35 @@ function startReview(){
   LSN={id:'__review__',review:true,items:buildReviewLesson(),i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
   document.getElementById("lessonOverlay").classList.add("show");document.body.style.overflow="hidden";renderLesson();
 }
+/* 📖 Konu Kitapçığı: dersi oynamadan tam konu anlatımını oku (tekrar/başvuru için) */
+function openGramBook(id){
+  const g=GRAMMAR.find(x=>x.id===id);if(!g)return;
+  const det=GDET[id]||{};const ext=GEXTRA[id]||{};const ctx=GCTX[id];
+  const exBox=e=>`<div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin:6px 0"><div style="font-size:15px;line-height:1.5">${e.en}</div><div class="muted" style="font-size:12.5px;margin-top:2px">${esc(e.tr)}</div></div>`;
+  let h=`<div style="max-width:680px;margin:0 auto;padding:16px 16px 90px;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch">
+    <div style="display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:2">
+      <div class="eyebrow">📖 Konu Kitapçığı</div>
+      <button class="x" onclick="closeLesson(false)">✕</button>
+    </div>
+    <h2 class="serif" style="font-size:24px;margin:.2em 0">${esc(g.title)} <span class="lvl ${lvlClass(g.lvl)}">${g.lvl}</span></h2>
+    <p class="muted" style="font-size:13.5px;margin:.2em 0 1em">🎯 ${esc(g.obj)} · Sınavda: ${(g.serves||[]).join(', ')}</p>`;
+  (det.lesson||[]).forEach(s=>{
+    h+=`<h3 style="font-size:17px;margin:1.2em 0 .3em">${s.h}</h3><p style="font-size:14.5px;line-height:1.75;margin:.2em 0">${s.p}</p>${(s.ex||[]).map(exBox).join('')}`;
+  });
+  if(ext.table){const tb=ext.table;
+    h+=`<h3 style="font-size:17px;margin:1.4em 0 .3em">📊 ${esc(tb.title)}</h3>
+    <div style="overflow-x:auto"><table class="gtab"><tr>${tb.head.map(x=>`<th>${esc(x)}</th>`).join('')}</tr>${tb.rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table></div>`;}
+  if(ext.signals&&ext.signals.length)h+=`<div style="margin-top:8px"><b style="font-size:13.5px">🔑 Sinyal kelimeler:</b><br>${ext.signals.map(s=>`<span class="sigchip">${esc(s.w)} → <b>${esc(s.use)}</b></span>`).join('')}</div>`;
+  if(ext.traps&&ext.traps.length)h+=`<h3 style="font-size:17px;margin:1.4em 0 .3em;color:var(--red)">⚠️ Sınav tuzakları</h3>${ext.traps.map(t=>`<div class="trapbox"><div class="trapbad">✗ ${esc(t.bad)}</div><div class="trapgood">✓ ${esc(t.good)}</div><div class="trapwhy">${esc(t.why)}</div></div>`).join('')}`;
+  if(ctx&&ctx.lines&&ctx.lines.length)h+=`<h3 style="font-size:17px;margin:1.4em 0 .3em">💬 Gerçek kullanım</h3><div class="ctxbox">${ctx.lines.map(l=>`<div class="ctxline"><div class="ctxen">${esc(strip(l.en)).replace(/\[\[/g,'<b style="color:var(--green)">').replace(/\]\]/g,'</b>')}</div><div class="ctxtr">${esc(l.tr)}</div></div>`).join('')}</div>`;
+  h+=`<div style="margin-top:18px;display:flex;gap:8px;flex-direction:column">
+    <button class="bigbtn green" onclick="closeLesson(false);startGrammarLesson('${id}')">🎮 İnteraktif derse başla</button>
+    <button class="btn ghost" style="width:100%" onclick="closeLesson(false)">Kapat</button>
+  </div></div>`;
+  const ov=document.getElementById("lessonOverlay");
+  ov.classList.add("show");document.body.style.overflow="hidden";
+  ov.innerHTML=h;
+}
 function startGrammarLesson(id){
   LSN={id:id,items:buildLesson(id),i:0,hearts:5,correct:0,total:0,answered:false,sel:null,built:[],bank:[]};
   document.getElementById("lessonOverlay").classList.add("show");
@@ -3401,6 +3630,26 @@ function renderLesson(){
   }else if(it.type==='tip'){
     body=`<div class="lesson-q"><div style="font-weight:700;color:var(--amber);font-size:13px;letter-spacing:1px">💡 KURAL</div><h2>${esc(it.title)}</h2><div class="lprompt" style="font-size:15px;line-height:1.75">${it.html}</div></div>`;
     foot=`<button class="bigbtn green" onclick="lessonNext()">${LSN.i===0?'Başla →':'Devam →'}</button>`;
+  }else if(it.type==='teach'){
+    body=`<div class="lesson-q"><div style="font-weight:700;color:var(--amber);font-size:13px;letter-spacing:1px">📚 KONU ANLATIMI · ${it.idx}/${it.tot}</div>
+      <h2 style="font-size:19px">${it.h}</h2>
+      <div class="lprompt" style="font-size:15px;line-height:1.75">${it.p}</div>
+      ${(it.ex||[]).map(e=>`<div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0"><div style="font-size:15.5px;line-height:1.5">${e.en}</div><div class="muted" style="font-size:13px;margin-top:2px">${esc(e.tr)}</div></div>`).join('')}</div>`;
+    foot=`<button class="bigbtn green" onclick="lessonNext()">${it.idx<it.tot?'Sonraki bölüm →':'Anlatım bitti — özete geç →'}</button>`;
+  }else if(it.type==='gtable'){
+    const tb=it.table;
+    body=`<div class="lesson-q"><div style="font-weight:700;color:var(--amber);font-size:13px;letter-spacing:1px">📊 ÖZET TABLO</div>
+      <h2 style="font-size:18px">${esc(tb.title||it.title)}</h2>
+      <div style="overflow-x:auto"><table class="gtab"><tr>${tb.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${tb.rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table></div>
+      ${(it.signals&&it.signals.length)?`<div style="margin-top:10px"><div style="font-weight:700;font-size:13px;margin-bottom:2px">🔑 Sinyal kelimeler — soruda bunu gör, yapıyı bil:</div>${it.signals.map(s=>`<span class="sigchip">${esc(s.w)} → <b>${esc(s.use)}</b></span>`).join('')}</div>`:''}
+      <p class="muted" style="font-size:12.5px;margin-top:10px">Bu tabloyu fotoğraf çeker gibi aklına kaydet — sınavda ilk bakışta yapıyı tanırsın.</p></div>`;
+    foot=`<button class="bigbtn green" onclick="lessonNext()">Devam →</button>`;
+  }else if(it.type==='traps'){
+    body=`<div class="lesson-q"><div style="font-weight:700;color:var(--red);font-size:13px;letter-spacing:1px">⚠️ SINAV TUZAKLARI</div>
+      <h2 style="font-size:18px">Sınav bu hatalara kuruludur</h2>
+      ${it.traps.map(t=>`<div class="trapbox"><div class="trapbad">✗ ${esc(t.bad)}</div><div class="trapgood">✓ ${esc(t.good)}</div><div class="trapwhy">${esc(t.why)}</div></div>`).join('')}
+      <p class="muted" style="font-size:12.5px;margin-top:8px">Şıklarda bu yanlış biçimleri gördüğünde ele; doğru biçimi seç.</p></div>`;
+    foot=`<button class="bigbtn green" onclick="lessonNext()">Alıştırmalara geç →</button>`;
   }else if(it.type==='mc'){
     body=`<div class="lesson-q"><div class="muted" style="font-weight:700;font-size:13px">DOĞRU SEÇENEĞİ SEÇ</div><h2>${esc(it.q)}</h2>
       <div id="lchoices">${it.opts.map((o,j)=>`<button class="lchoice" onclick="lPickMC(${j})">${esc(o)}</button>`).join("")}</div></div>`;
@@ -3488,6 +3737,9 @@ function lessonAskContext(){
   else if(it.type==='write')c+="Öğrenci bu kuralla kendi cümlesini yazıyor: "+(it.rule||"")+".";
   else if(it.type==='context')c+="Diyalog bağlamı: "+it.lines.map(l=>strip(l.en)).join(' / ')+".";
   else if(it.type==='tip')c+="Kural özeti: "+strip(it.html);
+  else if(it.type==='teach')c+="Konu anlatımı bölümü: "+strip(it.h)+" — "+strip(it.p);
+  else if(it.type==='gtable')c+="Özet tablo konusu: "+strip(it.table.title||'')+". Sinyaller: "+(it.signals||[]).map(s=>s.w+"→"+s.use).join('; ');
+  else if(it.type==='traps')c+="Sınav tuzakları: "+it.traps.map(t=>"✗"+t.bad+" → ✓"+t.good).join(' | ');
   return c;
 }
 async function lAsk(preset){
