@@ -96,14 +96,20 @@ async function searchQueryFromGemini(env, w, t, dbg) {
   if (!key) return null;
   const body = {
     contents: [{ parts: [{ text:
-      "You pick a stock-photo search query that best teaches the meaning of an English word.\n" +
-      "Word: \"" + w + "\"" + (t ? (" (Turkish: " + t + ")") : "") + "\n" +
-      "Return ONLY a 2-5 word English search phrase of CONCRETE, photographable things that clearly show this word's meaning. " +
-      "If the word is already a concrete object, return the word itself. " +
-      "If it is abstract/adjective/verb, return a concrete scene that depicts it (e.g. comfortable -> person relaxing on cozy sofa; honest -> friendly handshake). " +
-      "No quotes, no punctuation, no explanation."
+      "You are an expert at choosing stock-photo search queries that make an English word instantly memorable for a language learner.\n\n" +
+      "WORD: \"" + w + "\"" + (t ? (" (its Turkish meaning: " + t + ")") : "") + "\n\n" +
+      "Give ONE English search phrase (2 to 4 words) of CONCRETE, photographable subjects that UNAMBIGUOUSLY show THIS word's exact meaning.\n" +
+      "Rules:\n" +
+      "- Use the Turkish meaning to pick the correct sense; never drift to a synonym or a homonym.\n" +
+      "- Concrete noun (apple, bridge, doctor): return the word itself.\n" +
+      "- Adjective describing a thing (comfortable, fragile, spicy): show a clear example object/scene (comfortable -> cozy armchair living room; fragile -> broken glass shards; spicy -> red chili peppers).\n" +
+      "- Adjective describing a feeling (proud, nervous, confused): show a person's face/body clearly expressing it (proud -> proud smiling athlete medal; nervous -> anxious person biting nails).\n" +
+      "- Verb (deliver, negotiate, celebrate): show the action happening (deliver -> courier handing package; celebrate -> people cheering party).\n" +
+      "- Abstract noun (freedom, poverty, teamwork): use the most iconic concrete symbol (freedom -> bird flying open sky; teamwork -> hands stacked together).\n" +
+      "- Prefer everyday subjects that stock photos have MANY of; avoid rare or text-based scenes.\n" +
+      "Output ONLY the phrase. No quotes, no punctuation, no explanation."
     }] }],
-    generationConfig: { temperature: 0.3 }
+    generationConfig: { temperature: 0.2 }
   };
   for (const m of ["gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash"]) {
     try {
