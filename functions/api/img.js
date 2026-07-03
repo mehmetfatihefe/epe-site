@@ -14,12 +14,14 @@ function b64ToBytes(b64) {
 }
 
 // Nano Banana = Google Gemini görsel modeli. Görseli DOĞRUDAN üretir.
-async function imageFromGemini(env, prompt) {
+// dbg (varsa) her modelin sonucunu/hatasını kaydeder (teşhis için).
+async function imageFromGemini(env, prompt, dbg) {
   const key = env.GEMINI_API_KEY;
-  if (!key) return null;
+  if (!key) { if (dbg) dbg.push("no GEMINI_API_KEY"); return null; }
   const body = {
     contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { responseModalities: ["IMAGE"] }
+    // Bazı modeller yalnız IMAGE kabul etmez; TEXT+IMAGE her ikisinde de çalışır.
+    generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
   };
   const models = ["gemini-2.5-flash-image", "gemini-2.5-flash-image-preview", "gemini-2.0-flash-preview-image-generation"];
   for (const m of models) {
@@ -27,15 +29,17 @@ async function imageFromGemini(env, prompt) {
       const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + m + ":generateContent?key=" + encodeURIComponent(key),
         { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const d = await r.json();
-      if (d.error) continue;
+      if (d.error) { if (dbg) dbg.push(m + " ERROR: " + (d.error.message || JSON.stringify(d.error)).slice(0, 200)); continue; }
       const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
-      if (!parts) continue;
+      if (!parts) { if (dbg) dbg.push(m + " no parts: " + JSON.stringify(d).slice(0, 200)); continue; }
       for (const p of parts) {
         if (p.inlineData && p.inlineData.data) {
+          if (dbg) dbg.push(m + " OK image " + (p.inlineData.mimeType || "?"));
           return { bytes: b64ToBytes(p.inlineData.data), mime: p.inlineData.mimeType || "image/png" };
         }
       }
-    } catch (e) { /* sıradaki model */ }
+      if (dbg) dbg.push(m + " parts had no image");
+    } catch (e) { if (dbg) dbg.push(m + " threw: " + (e && e.message)); }
   }
   return null;
 }
@@ -84,16 +88,22 @@ export async function onRequest(context) {
   if (sParam && /^\d+$/.test(sParam)) { seed = parseInt(sParam, 10) % 100000; }
   else { seed = 0; for (let i = 0; i < w.length; i++) seed = (seed * 31 + w.charCodeAt(i)) >>> 0; seed = seed % 100000; }
 
+  const debug = url.searchParams.get("debug") === "1";
+  const dbg = debug ? [] : null;
+
   // Kelimeyi anlatan somut sahne (yoksa kavram)
   let scene = null;
   try { scene = await sceneFromGemini(env, w, t); } catch (e) {}
   const subject = scene || (t ? (t + ", " + w) : w);
+  if (dbg) dbg.push("scene: " + subject);
 
   // 1) EN İYİ: Nano Banana (Gemini) görseli doğrudan üretir — edge'de, kısıt yok.
   try {
     const gimg = await imageFromGemini(env,
-      subject + ". A clean modern flat vector illustration, single clear composition, distinct well-separated subjects with correct anatomy, soft friendly colors, plain white background. No text, no words, no letters, no captions."
+      subject + ". A clean modern flat vector illustration, single clear composition, distinct well-separated subjects with correct anatomy, soft friendly colors, plain white background. No text, no words, no letters, no captions.",
+      dbg
     );
+    if (dbg) return new Response(JSON.stringify({ hasGeminiKey: !!env.GEMINI_API_KEY, geminiImage: !!gimg, log: dbg }, null, 2), { headers: { "Content-Type": "application/json" } });
     if (gimg) {
       const resp = new Response(gimg.bytes, { status: 200, headers: {
         "Content-Type": gimg.mime,

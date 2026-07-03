@@ -2770,7 +2770,7 @@ async function wikiImage(term){
   }catch(e){return null;}
 }
 const _visBusy={};
-const IMGV="4"; // görsel sürümü — artınca eski önbellek baypas edilir
+const IMGV="5"; // görsel sürümü — artınca eski önbellek baypas edilir
 function loadable(url){return new Promise(function(res){const im=new Image();im.onload=function(){res(true);};im.onerror=function(){res(false);};im.src=url;});}
 function genImgUrl(en,tr,extra){return "/api/img?w="+encodeURIComponent(en)+(tr?("&t="+encodeURIComponent(tr)):"")+"&v="+IMGV+(extra||"");}
 async function ensureVisual(vid,en,tr){
